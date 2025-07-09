@@ -1,7 +1,8 @@
 # 📦 Scripts de Publication
 
 Ce répertoire contient les scripts automatisés pour la publication du package `dengsurvap-bf` sur PyPI.
-
+# Installer localement pour tester
+pip install dist/dengsurvap_bf-0.2.0-py3-none-any.whl
 ## 🚀 Scripts Disponibles
 
 ### 1. `setup_pypi.sh` - Configuration des identifiants
