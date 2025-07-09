@@ -1,0 +1,12 @@
+# POUR UN PREMIER COMMIT
+git init
+git add README.md
+git commit -m "first commit"
+git branch -M main
+git remote add origin https://github.com/yamsaid/dengsurvap-bf.git
+git push -u origin main
+
+# POUR DES MISES A JOURS
+git remote add origin https://github.com/yamsaid/dengsurvap-bf.git
+git branch -M main
+git push -u origin main

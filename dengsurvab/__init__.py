@@ -7,7 +7,7 @@ Ce package fournit une interface Python complète pour accéder aux données
 Exemple d'utilisation:
     >>> from dengsurvab import AppiClient
     >>> client = AppiClient("https://api.example.com", "your-api-key")
-    >>> cas = client.get_cas_dengue(date_debut="2024-01-01", date_fin="2024-12-31")
+    >>> cas = client.get_cas_dengue(annee=2024, mois=1, region="Centre")
 """
 
 from .client import AppiClient

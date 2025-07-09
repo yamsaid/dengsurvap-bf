@@ -124,35 +124,11 @@ class TestAppiClient:
     
     @responses.activate
     def test_get_cas_dengue(self, client):
-        """Test la récupération des cas de dengue."""
-        mock_data = {
-            "data": [
-                {
-                    "idCas": 1,
-                    "date_consultation": "2024-01-15",
-                    "region": "Antananarivo",
-                    "district": "Analamanga",
-                    "sexe": "masculin",
-                    "age": 25,
-                    "resultat_test": "positif",
-                    "serotype": "denv2",
-                    "hospitalise": "non",
-                    "issue": "guéri",
-                    "id_source": 1
-                }
-            ]
-        }
-        
-        responses.add(
-            responses.GET,
-            "https://api.test.com/api/data/hebdomadaires",
-            json=mock_data,
-            status=200
-        )
-        
+        """Test de récupération des cas de dengue."""
         cas = client.get_cas_dengue(
-            date_debut="2024-01-01",
-            date_fin="2024-01-31"
+            annee=2024,
+            mois=1,
+            region="Centre"
         )
         
         assert len(cas) == 1

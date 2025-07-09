@@ -236,11 +236,9 @@ class TestCLIHandlers:
             
             mock_print.assert_called()
             mock_client.get_cas_dengue.assert_called_once_with(
-                date_debut="2024-01-01",
-                date_fin="2024-01-31",
-                region="centre",
-                district="hauts-bassins",
-                limit=10
+                annee=2024,
+                mois=1,
+                region="Centre"
             )
     
     def test_handle_cas_error(self, mock_client):

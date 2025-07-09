@@ -74,142 +74,75 @@ Utilisateur → AppiClient → API Appi → Données épidémiologiques
 
 ---
 
-## 🔧 Installation et configuration
+## 🚀 Installation
 
-### Installation
-
-```bash
-# Installation de base
-pip install dengsurvap-bf
-
-# Installation avec fonctionnalités d'analyse
-pip install dengsurvap-bf[analysis]
-
-# Installation en mode développement
-pip install -e .
-```
-
-### Configuration
-
-#### Variables d'environnement
-
-```bash
-# URL de l'API
-export APPI_API_URL="https://api-bf-dengue-survey-production.up.railway.app"
-
-# Clé API (optionnelle)
-export APPI_API_KEY="votre-clé-api"
-
-# Mode debug
-export APPI_DEBUG="true"
-```
-
-#### Configuration programmatique
-
-```python
-from dengsurvab import AppiClient
-
-# Configuration manuelle
-client = AppiClient(
-    base_url="https://api.appi.com",
-    api_key="your-api-key",
-    timeout=30,
-    retry_attempts=3,
-    debug=True
-)
-
-# Configuration depuis l'environnement
-client = AppiClient.from_env()
-```
+Pour utiliser le client Appi Dengue, il faut d'abord installer le package Python. L'installation standard suffit pour accéder à toutes les fonctionnalités principales (connexion, récupération de données, alertes, export). Si vous souhaitez réaliser des analyses statistiques avancées ou des visualisations, ajoutez l'option `[analysis]` pour installer les dépendances supplémentaires (pandas, matplotlib, seaborn, etc.).
 
 ---
 
-## 📖 Guide d'utilisation
+## 📖 Guide rapide
 
-### 1. Connexion et authentification
+Ce guide vous accompagne pas à pas pour démarrer avec le client Appi Dengue. Vous apprendrez à vous connecter à l'API, à récupérer et exporter des données, et à utiliser les principales fonctionnalités du package. Chaque exemple est conçu pour être directement réutilisable dans vos propres scripts ou notebooks.
 
-```python
-from dengsurvab import AppiClient
+---
 
-# Initialisation
-client = AppiClient("https://api.appi.com")
+## Connexion à l'API
 
-# Authentification
-auth_result = client.authenticate("user@example.com", "password")
-print(f"Token: {auth_result['access_token']}")
+Avant toute opération, il est nécessaire d'initialiser le client avec l'URL de l'API et, si besoin, une clé API. L'authentification permet d'accéder aux données sécurisées et de personnaliser l'expérience selon le profil utilisateur (droits, préférences, etc.).
 
-# Vérification du profil
-profile = client.get_profile()
-print(f"Utilisateur: {profile.username} ({profile.role})")
-```
+---
 
-### 2. Récupération des données
+## Récupération des données
 
-```python
-# Cas de dengue
-cas = client.get_cas_dengue(
-    date_debut="2024-01-01",
-    date_fin="2024-01-31",
-    region="Antananarivo",
-    limit=100
-)
+Le client permet de récupérer facilement les cas de dengue, les indicateurs épidémiologiques par période, et d'autres informations utiles pour l'analyse ou la veille sanitaire. Utilisez les filtres (dates, région, district, etc.) pour cibler précisément les données qui vous intéressent. Ces méthodes sont adaptées aussi bien à l'exploration rapide qu'à l'intégration dans des pipelines d'analyse.
 
-# Statistiques générales
-stats = client.get_stats()
-print(f"Total cas: {stats.total_cas}")
+---
 
-# Indicateurs hebdomadaires
-indicateurs = client.data_period(
-    date_debut="2024-01-01",
-    date_fin="2024-01-31",
-    region="Toutes"
-)
-```
+## Export de données
 
-### 3. Gestion des alertes
+Pour sauvegarder ou partager les données, utilisez la classe `DataExporter` ou directement la calsse `AppiClient`. Elles permettent d'exporter les résultats dans différents formats (CSV, JSON, Excel) adaptés à vos besoins : archivage, reporting, import dans d'autres outils, ou analyse avancée avec pandas. L'export direct en DataFrame facilite l'intégration avec l'écosystème Python scientifique.
 
-```python
-# Configuration des seuils
-client.configurer_seuils(
-    seuil_positivite=10,
-    seuil_hospitalisation=5,
-    seuil_deces=2
-)
+---
 
-# Récupération des alertes
-alertes = client.get_alertes(
-    severity="critical",
-    status="active",
-    limit=10
-)
+## Gestion des alertes
 
-# Vérification automatique
-resultat = client.verifier_alertes(
-    date_debut="2024-01-01",
-    date_fin="2024-01-31"
-)
-```
+Le système d'alertes intégré vous aide à surveiller automatiquement les seuils critiques (taux de positivité, hospitalisations, décès, etc.), à configurer des notifications, et à suivre l'évolution des risques sanitaires. C'est un outil clé pour la veille épidémiologique et la prise de décision rapide.
 
-### 4. Export de données
+---
 
-```python
-# Export CSV
-csv_data = client.export_data(
-    format="csv",
-    date_debut="2024-01-01",
-    date_fin="2024-01-31"
-)
+## 🔧 Configuration
 
-# Sauvegarde
-with open("donnees.csv", "wb") as f:
-    f.write(csv_data)
+Configurer le client via des variables d'environnement est la méthode recommandée pour sécuriser vos identifiants. Cela évite de stocker des informations sensibles dans le code source et permet de changer facilement de configuration sans modifier vos scripts.
 
-# Export des alertes
-alertes_csv = client.export_alertes(
-    format="csv",
-    severity="critical"
-)
-```
+---
+
+## Configuration programmatique
+
+Vous pouvez aussi configurer le client directement dans votre code Python, en utilisant les variables d'environnement ou en passant les paramètres manuellement. Cette méthode est utile pour les scripts portables ou les environnements où la configuration par variables d'environnement n'est pas possible.
+
+---
+
+## 🚀 Commande CLI rapide : `dab`
+
+La CLI `dab` permet d'automatiser et de simplifier toutes les opérations courantes (authentification, export, alertes, etc.) directement depuis le terminal, sans écrire de code Python. Elle est idéale pour les scripts, l'intégration continue, ou pour les utilisateurs non-développeurs qui souhaitent accéder rapidement aux données.
+
+---
+
+## 📊 Utilisation avancée avec DataFrame
+
+Pour l'analyse de données, il est souvent plus pratique d'obtenir directement un DataFrame pandas. Les méthodes `data`, `export_to_dataframe`, `alertes`, et `alertes_to_dataframe` permettent d'intégrer les données dans vos workflows analytiques Python, facilitant ainsi la visualisation, le traitement statistique et la modélisation.
+
+---
+
+## 🧪 Tests (cette section addresse aux contributeurs)
+
+Les tests sont essentiels pour garantir la fiabilité et la robustesse du package. Ils permettent de vérifier que toutes les fonctionnalités fonctionnent comme prévu, d'éviter les régressions lors des mises à jour, et de faciliter la maintenance du code.
+
+---
+
+## 🐛 Dépannage
+
+Cette section propose des solutions concrètes aux erreurs courantes (authentification, connexion, validation) et des conseils pratiques pour diagnostiquer rapidement les problèmes. Elle vous aide à gagner du temps et à résoudre efficacement les blocages éventuels.
 
 ---
 
@@ -238,13 +171,10 @@ Récupère le profil de l'utilisateur connecté.
 
 ```python
 def get_cas_dengue(self, 
-                   date_debut: Optional[str] = None,
-                   date_fin: Optional[str] = None,
+                   annee: int = date.today().year,
+                   mois: int = date.today().month,
                    region: Optional[str] = None,
-                   district: Optional[str] = None,
-                   limit: Optional[int] = None,
-                   page: int = 1,
-                   page_size: int = 100) -> List[CasDengue]
+                   district: Optional[str] = None) -> List[CasDengue]
 ```
 Récupère les cas de dengue selon les critères.
 
@@ -254,15 +184,15 @@ def get_stats(self) -> Statistiques
 Récupère les statistiques générales.
 
 ```python
-def data_period(self,
+def donnees_par_periode(self,
                          date_debut: str,
                          date_fin: str,
                          region: str = "Toutes",
                          district: str = "Toutes",
                          frequence: str = "W") -> List[IndicateurHebdo]
 ```
-Récupère les indicateurs hebdomadaires.
 
+Récupère les indicateurs hebdomadaires ou mensuelles. frequence : `W --> Semaine` et `M --> Mois`.
 #### Méthodes d'alertes
 
 ```python
@@ -294,22 +224,25 @@ Vérifie les alertes selon les critères.
 #### Méthodes d'export
 
 ```python
-def export_data(self,
-               format: str = "csv",
-               date_debut: Optional[str] = None,
-               date_fin: Optional[str] = None,
-               region: Optional[str] = None,
-               district: Optional[str] = None,
-               limit: Optional[int] = None) -> bytes
+def save_to_file(self,
+        filepath: Optional[str] = None,
+        date_debut: Optional[str] = None,
+        date_fin: Optional[str] = None,
+        region: Optional[str] = None,
+        district: Optional[str] = None,
+        limit: Optional[int] = None,
+        page: Optional[int] = None,
+        format: str = "csv") -> bool:
 ```
 Exporte les données dans le format spécifié.
 
 ```python
-def export_alertes(self,
-                  format: str = "csv",
-                  limit: int = 100,
-                  severity: Optional[str] = None,
-                  status: Optional[str] = None) -> bytes
+def alertes_to_file(self,
+                          filepath: Optional[str] = None,
+                          limit: int = 100,
+                          severity: Optional[str] = None,
+                          status: Optional[str] = None,
+                          format: str = "csv") -> bool:
 ```
 Exporte les alertes dans le format spécifié.
 
@@ -420,7 +353,7 @@ data_csv = exporter.export_data(
 )
 
 # Export d'alertes
-alertes_csv = exporter.export_alertes(
+alertes_csv = exporter.alertes(
     format="csv",
     severity="critical"
 )
@@ -463,7 +396,7 @@ from dengsurvab import AppiClient, AuthenticationError, APIError
 
 try:
     client = AppiClient("https://api.appi.com")
-    cas = client.get_cas_dengue(date_debut="2024-01-01")
+    cas = client.get_cas_dengue(annee=2024, mois=1)
     
 except AuthenticationError as e:
     print(f"Erreur d'authentification: {e}")
@@ -474,22 +407,6 @@ except APIError as e:
 except Exception as e:
     print(f"Erreur inattendue: {e}")
 ```
-
-### Codes d'erreur
-
-| Code | Exception | Description |
-|------|------------|-------------|
-| 401 | AuthenticationError | Token invalide ou expiré |
-| 403 | AuthenticationError | Permissions insuffisantes |
-| 400 | ValidationError | Données invalides |
-| 404 | APIError | Ressource non trouvée |
-| 429 | RateLimitError | Limite de requêtes dépassée |
-| 500 | APIError | Erreur serveur |
-| -1 | ConnectionError | Erreur de connexion |
-
----
-
-## 💡 Exemples d'utilisation
 
 ### Exemple 1: Surveillance épidémiologique
 
@@ -502,8 +419,8 @@ client.authenticate("epidemiologist@health.gov", "password")
 
 # Récupération des données
 cas = client.get_cas_dengue(
-    date_debut="2024-01-01",
-    date_fin="2024-01-31",
+    annee=2024,
+    mois=1,
     region="Antananarivo"
 )
 
@@ -586,7 +503,7 @@ cas_csv = exporter.export_data(
 )
 
 # Export JSON des alertes
-alertes_json = exporter.export_alertes(
+alertes_json = exporter.alertes(
     format="json",
     severity="critical"
 )
@@ -606,170 +523,250 @@ exporter.save_to_file(rapport_excel, "rapport_epidemio.xlsx", "xlsx")
 print("Exports terminés avec succès")
 ```
 
-### Exemple 4: Utilisation CLI
-
-```bash
-# Authentification
-python -m dengsurvab auth --email user@example.com --password password
-
-# Statistiques
-python -m dengsurvab stats
-
-# Récupération de cas
-python -m dengsurvab cas --date-debut 2024-01-01 --date-fin 2024-01-31 --region Antananarivo
-
-# Alertes critiques
-python -m dengsurvab alertes --severity critical --limit 10
-
-# Export de données
-python -m dengsurvab export --format csv --output donnees.csv --date-debut 2024-01-01 --date-fin 2024-01-31
-
-# Liste des régions
-python -m dengsurvab regions
-
-# Districts d'une région
-python -m dengsurvab districts --region Antananarivo
-```
-
 ---
 
-## 🧪 Tests et qualité
+## �� Fonctions de résumé et d'analyse
 
-### Exécution des tests
+Le package offre deux méthodes principales pour générer des résumés statistiques complets de la base de données :
 
-```bash
-# Installation des dépendances de test
-pip install dengsurvap-bf[dev]
-
-# Exécution des tests
-pytest tests/
-
-# Avec couverture
-pytest tests/ --cov=dengsurvab --cov-report=html
-
-# Tests spécifiques
-pytest tests/test_client.py
-pytest tests/test_analytics.py
-pytest tests/test_alerts.py
-```
-
-### Couverture de tests
-
-- **test_client.py**: Tests du client principal (100%)
-- **test_analytics.py**: Tests des analyses (85%)
-- **test_alerts.py**: Tests des alertes (90%)
-- **test_export.py**: Tests d'export (80%)
-- **test_auth.py**: Tests d'authentification (95%)
-
-### Qualité du code
-
-```bash
-# Linting
-flake8 dengsurvab/
-
-# Type checking
-mypy dengsurvab/
-
-# Formatage
-black dengsurvab/
-```
-
----
-
-## 🚀 Déploiement
-
-### Configuration de production
+### `resume()` - Résumé structuré
+Cette méthode retourne un dictionnaire JSON structuré contenant toutes les statistiques descriptives (période de couverture, informations générales, analyse des variables, qualité des données). Idéal pour l'intégration dans des applications ou l'analyse programmatique.
 
 ```python
-# Configuration recommandée
-client = AppiClient(
-    base_url="https://api.appi.com",
-    api_key="production-api-key",
-    timeout=60,           # Timeout plus long en production
-    retry_attempts=5,     # Plus de tentatives
-    retry_delay=2.0,      # Délai plus long
-    debug=False           # Pas de debug en production
+# Résumé complet en JSON
+resume_data = client.resume(limit=100)
+print(f"Total enregistrements: {resume_data['informations_generales']['total_enregistrements']}")
+print(f"Taux de complétude: {resume_data['qualite_donnees']['taux_completude_global']}%")
+```
+
+### `resume_display()` - Affichage console avec graphiques
+Cette méthode génère un affichage formaté directement dans la console, similaire aux méthodes `info()` et `describe()` de pandas. Elle peut inclure des graphiques descriptifs pour une visualisation immédiate.
+
+```python
+# Affichage complet avec graphiques
+client.resume_display(
+    verbose=True,      # Afficher tous les détails
+    show_details=True, # Statistiques détaillées
+    graph=True        # Afficher les graphiques
+)
+
+# Affichage simplifié sans graphiques
+client.resume_display(
+    verbose=False,     # Affichage concis
+    show_details=False, # Pas de détails
+    graph=False       # Pas de graphiques
 )
 ```
 
-### Variables d'environnement de production
+### Utilisation via la CLI
+Les fonctions de résumé sont également accessibles via la commande `dab` :
 
 ```bash
-# Production
-export APPI_API_URL="https://api-bf-dengue-survey-production.up.railway.app"
-export APPI_API_KEY="votre-clé-api"
-export APPI_DEBUG="false"
-export APPI_TIMEOUT="30"
-export APPI_RETRY_ATTEMPTS="3"
+# Résumé simple
+dab resume
+
+# Résumé avec graphiques
+dab resume --graph
+
+# Résumé détaillé
+dab resume --verbose --show-details
+
+# Résumé avec limite d'enregistrements
+dab resume --limit 1000
 ```
 
-### Monitoring et logging
+Ces fonctions sont particulièrement utiles pour :
+- **Audit de données** : Vérifier la qualité et la complétude des données
+- **Reporting** : Générer des rapports statistiques automatiques
+- **Monitoring** : Surveiller l'évolution de la base de données
+- **Analyse exploratoire** : Comprendre rapidement la structure des données
 
-```python
-import logging
+---
 
-# Configuration du logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('appi_client.log'),
-        logging.StreamHandler()
-    ]
-)
+## 📑 Exemples d'utilisation de la CLI
 
-# Utilisation avec logging
-client = AppiClient("https://api.appi.com", debug=True)
-client.logger.info("Client initialisé")
+Voici des cas d'usage concrets de la commande `dab` :
+
+### 1. Authentification
+
+```bash
+dab auth --email user@example.com --password monmotdepasse
+```
+*Authentifie l’utilisateur et prépare le token pour les autres commandes.*
+
+---
+
+### 2. Afficher les statistiques générales
+
+```bash
+dab stats
+```
+*Affiche le nombre total de cas, hospitalisations, décès, etc.*
+
+---
+
+### 3. Récupérer les cas de dengue sur une période
+
+```bash
+dab cas --date-debut 2024-01-01 --date-fin 2024-01-31 --region Centre --limit 20
+```
+*Récupère les 20 premiers cas de la région Centre pour janvier 2024.*
+
+---
+
+### 4. Lister les alertes critiques actives
+
+```bash
+dab alertes --severity critical --status active --limit 5
+```
+*Affiche les 5 alertes critiques actives les plus récentes.*
+
+---
+
+### 5. Exporter les données au format CSV
+
+```bash
+dab export --format csv --output donnees_janvier.csv --date-debut 2024-01-01 --date-fin 2024-01-31
+```
+*Exporte toutes les données de janvier 2024 dans un fichier CSV.*
+
+---
+
+### 6. Exporter les alertes au format JSON
+
+```bash
+dab export --format json --output alertes.json --date-debut 2024-01-01 --date-fin 2024-01-31 --region Centre
+```
+*Exporte les alertes de la région Centre en janvier 2024 au format JSON.*
+
+---
+
+### 7. Lister toutes les régions disponibles
+
+```bash
+dab regions
 ```
 
 ---
 
-## 📚 Ressources supplémentaires
+### 8. Lister les districts d’une région
 
-### Documentation API
-
-- [Documentation API Appi](https://api.appi.com/docs)
-- [Guide d'authentification](https://api.appi.com/auth)
-- [Référence des endpoints](https://api.appi.com/endpoints)
-
-### Support
-
-- **Email**: saidouyameogo3@gmail.com
-- **Issues**: GitHub Issues
-- **Documentation**: README.md et ce document
-
-### Contribution
-
-1. Fork le repository
-2. Créer une branche feature
-3. Ajouter les tests
-4. Soumettre une pull request
+```bash
+dab districts --region Centre
+```
 
 ---
 
-## 📝 Notes de version
+### 9. Obtenir de l’aide sur une commande
 
-### Version 0.1.0
-
-- ✅ Client principal AppiClient
-- ✅ Authentification JWT
-- ✅ Gestion des alertes
-- ✅ Export multi-formats
-- ✅ Analyses épidémiologiques
-- ✅ Interface CLI
-- ✅ Tests complets
-- ✅ Documentation complète
-
-### Roadmap
-
-- 🔄 Support WebSocket pour les alertes temps réel
-- 🔄 Cache Redis pour les performances
-- 🔄 Intégration avec PowerBI
-- 🔄 API GraphQL
-- 🔄 Support multi-langues
-- 🔄 Dashboard web intégré
+```bash
+dab export --help
+```
+*Affiche toutes les options disponibles pour la commande d’export.*
 
 ---
 
-*Documentation générée le $(date) - Version 0.1.0* 
+### 10. Script d’automatisation (exemple Bash)
+
+```bash
+dab auth --email user@example.com --password monmotdepasse
+dab export --format csv --output export.csv --date-debut 2024-01-01 --date-fin 2024-01-31
+dab alertes --severity warning --limit 10 > alertes.txt
+```
+*Automatise l’authentification, l’export et la récupération d’alertes dans un script.*
+
+---
+
+## 🖥️ Utilisation détaillée des commandes CLI
+
+Le package `dengsurvap-bf` fournit une commande CLI officielle : **dab**
+
+Après installation du package (`pip install dengsurvap-bf`), la commande `dab` est disponible partout dans votre terminal.
+
+### Commandes principales
+
+#### 1. Authentification
+
+```bash
+dab auth --email <email> --password <motdepasse>
+```
+- **Description** : Authentifie l'utilisateur et stocke le token pour les commandes suivantes.
+- **Options** :
+  - `--email` : Email de l'utilisateur (obligatoire)
+  - `--password` : Mot de passe (obligatoire)
+- **Exemple** :
+  ```bash
+  dab auth --email user@example.com --password monmotdepasse
+  ```
+
+#### 2. Statistiques générales
+
+```bash
+dab stats
+```
+- **Description** : Affiche les statistiques globales de la base de données (total cas, hospitalisations, décès, etc.).
+- **Exemple** :
+  ```bash
+  dab stats
+  ```
+
+#### 3. Récupération de cas de dengue
+
+```bash
+dab cas --date-debut <YYYY-MM-DD> --date-fin <YYYY-MM-DD> [--region <nom>] [--district <nom>] [--limit <n>]
+```
+- **Description** : Récupère les cas de dengue selon les critères fournis.
+- **Options** :
+  - `--date-debut` : Date de début (obligatoire)
+  - `--date-fin` : Date de fin (obligatoire)
+  - `--region` : Région (optionnel)
+  - `--district` : District (optionnel)
+  - `--limit` : Nombre maximum de cas (optionnel)
+- **Exemple** :
+  ```bash
+  dab cas --date-debut 2024-01-01 --date-fin 2024-01-31 --region Centre --limit 50
+  ```
+
+#### 4. Gestion des alertes
+
+```bash
+dab alertes [--severity <niveau>] [--status <statut>] [--limit <n>]
+```
+- **Description** : Affiche la liste des alertes selon la sévérité, le statut, etc.
+- **Options** :
+  - `--severity` : Niveau de sévérité (ex : critical, warning)
+  - `--status` : Statut (active, resolved)
+  - `--limit` : Nombre maximum d'alertes
+- **Exemple** :
+  ```bash
+  dab alertes --severity critical --status active --limit 10
+  ```
+
+#### 5. Export de données
+
+```bash
+dab export --format <csv|json|xlsx|pdf> --output <fichier> --date-debut <YYYY-MM-DD> --date-fin <YYYY-MM-DD> [--region <nom>] [--district <nom>]
+```
+- **Description** : Exporte les données dans le format choisi.
+- **Options** :
+  - `--format` : Format d'export (csv, json, xlsx, pdf)
+  - `--output` : Chemin du fichier de sortie
+  - `--date-debut` / `--date-fin` : Période à exporter (obligatoire)
+  - `--region` / `--district` : Filtres géographiques (optionnels)
+- **Exemple** :
+  ```bash
+  dab export --format csv --output donnees.csv --date-debut 2024-01-01 --date-fin 2024-01-31
+  ```
+
+#### 6. Liste des régions
+
+```bash
+dab regions
+```
+- **Description** : Affiche la liste des régions disponibles.
+
+#### 7. Liste des districts d'une région
+
+```bash
+dab districts --region <nom>
+```

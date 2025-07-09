@@ -58,6 +58,8 @@ class Status(str, Enum):
     """Enumération pour le statut des alertes."""
     ACTIVE = "active"
     RESOLVED = "resolved"
+    ACTIVE_INT = 1
+    RESOLVED_INT = 0
 
 
 class Role(str, Enum):

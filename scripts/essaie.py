@@ -7,7 +7,7 @@ dengsurvap_path = os.path.join(current_dir, 'dengsurvap-bf')
 sys.path.insert(0, dengsurvap_path)
 
 from dengsurvab import AppiClient
-import requests
+#import requests
 import json
 from datetime import datetime
 
@@ -24,11 +24,16 @@ client.authenticate("yamsaid74@gmail.com", "1122Aa")
 
 
 '''cas = client.get_cas_dengue(
-    date_debut="2024-01-01",
-    date_fin="2025-07-01",
-    region="centre"
+    annee=2024,
+    mois=1,
+    region="Centre"
 )'''
 
+"""print(client.get_cas_dengue(
+    annee=2024,
+    mois=1,
+    region="Centre"
+))"""
 
 
 #print(client.get_stats())
@@ -119,9 +124,9 @@ print(client.data_period(
     frequence="W"
 ))"""
 
-print(client.logout())
+#print(client.logout())
 
-# Test de la fonction resume avec affichage professionnel
+"""# Test de la fonction resume avec affichage professionnel
 print("\n" + "="*50)
 print("TEST DE LA FONCTION RESUME_DISPLAY")
 print("="*50)
@@ -135,7 +140,32 @@ print("="*50)
 
 # Test de l'affichage avec graphiques
 client.resume_display(verbose=True, show_details=True, graph=True)  
+"""
+"""
+df = client.data(
+    date_debut="2024-01-01",
+    date_fin="2025-07-01",
+    limit=20,
+    page=1
+)
 
+print(df)"""
+"""
+client.save_to_file(
+    date_debut="2024-01-01",
+    date_fin="2025-07-01",
+    limit=20,
+    page=1
+)
+"""
+"""client.alertes_to_file(limit=3)"""
 
+#print(client.resume_display(limit=20, verbose=True, show_details=True, graph=True))
+
+#print(client.calculate_rates(date_debut="2024-01-01", date_fin="2025-07-01"))
+
+#print(client.donnees_par_periode(date_debut="2024-01-01", date_fin="2025-07-01"))
+
+print(client.resume_display())
 
 

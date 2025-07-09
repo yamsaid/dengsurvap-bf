@@ -255,47 +255,33 @@ class AppiClient:
         return self.auth.update_profile(**kwargs)
     
     # ==================== DONNÉES DE DENGUE ====================
-    
+   
     def get_cas_dengue(self,
-                       date_debut: Optional[str] = None,
-                       date_fin: Optional[str] = None,
-                       region: Optional[str] = None,
-                       district: Optional[str] = None,
-                       limit: Optional[int] = None,
-                       page: int = 1,
-                       page_size: int = 100) -> List[CasDengue]:
-        """
-        Récupère les cas de dengue selon les critères.
-        
+                       annee : int = date.today().year,
+                       mois : int = date.today().month,
+                       region : Optional[str] = None,
+                       district : Optional[str] = None,
+                       ) -> List[CasDengue]:
+        """_summary_
+
         Args:
-            date_debut: Date de début (format YYYY-MM-DD)
-            date_fin: Date de fin (format YYYY-MM-DD)
-            region: Région à filtrer
-            district: District à filtrer
-            limit: Nombre maximum de résultats
-            page: Numéro de page
-            page_size: Taille de page
-            
+            annee (int, optional): _description_. Defaults to date.today().year.
+            mois (int, optional): _description_. Defaults to date.today().month.
+            region (Optional[str], optional): _description_. Defaults to None.
+            district (Optional[str], optional): _description_. Defaults to None.
+
         Returns:
-            Liste des cas de dengue
+            List[CasDengue]: _description_
         """
         params = {
-            'page': page,
-            'page_size': page_size
+            'annee': annee,
+            'mois': mois,
+            'region': region,
+            'district': district
         }
         
-        if date_debut:
-            params['date_debut'] = date_debut
-        if date_fin:
-            params['date_fin'] = date_fin
-        if region:
-            params['region'] = region
-        if district:
-            params['district'] = district
-        if limit:
-            params['limit'] = limit
-        
         data = self._make_request("GET", "/api/data/hebdomadaires", params=params)
+        
         
         # Conversion en objets CasDengue
         cas_list = []
@@ -308,6 +294,7 @@ class AppiClient:
         
         return cas_list
     
+    # a revoir
     def add_cas_dengue(self, cas_list: List[ValidationCasDengue]) -> Dict[str, Any]:
         """
         Ajoute une liste de cas de dengue.
@@ -379,12 +366,12 @@ class AppiClient:
         return data if isinstance(data, list) else data.get('districts', [])
     
     # ==================== INDICATEURS ÉPIDÉMIOLOGIQUES ====================
-    
-    def data_period(self,
-        date_debut: str,
-        date_fin: str,
-        region: str = "Toutes",
-        district: str = "Tous",
+    # a revoir
+    def donnees_par_periode(self,
+        date_debut: Optional[str] = None,
+        date_fin: Optional[str] = None,
+        region: Optional[str] = None,
+        district: Optional[str] = None,
         frequence: str = "W"
         ) -> List[IndicateurHebdo]:
 
@@ -412,10 +399,10 @@ class AppiClient:
         data = self._make_request("GET", "/api/time-series", params=params)
         
         indicateurs = []
-        for ind_data in data['data']:
+        for ind_data in data:
             try:
-                indicateur = IndicateurHebdo(**ind_data)
-                indicateurs.append(indicateur)
+                #indicateur = IndicateurHebdo(**ind_data)
+                indicateurs.append(ind_data)
             except Exception as e:
                 self.logger.warning(f"Erreur de validation de l'indicateur: {e}")
         
@@ -622,11 +609,11 @@ class AppiClient:
             # Créer une liste de dictionnaires
             data_list = []
             for cas in cas_list:
-                cas_dict = cas.model_dump()
+                # cas_dict = cas.model_dump()
                 # Convertir les dates en string pour pandas
-                if cas_dict.get('date_consultation'):
-                    cas_dict['date_consultation'] = str(cas_dict['date_consultation'])
-                data_list.append(cas_dict)
+                if cas.get('date_consultation'):
+                    cas['date_consultation'] = str(cas['date_consultation'])
+                data_list.append(cas)
             
             df = pd.DataFrame(data_list)
             
@@ -720,11 +707,11 @@ class AppiClient:
             self.logger.error(f"Erreur lors de la sauvegarde: {e}")
             raise IOError(f"Impossible de sauvegarder le fichier {filepath}: {e}")
 
-    def export_alertes(self,
-                      format: str = "csv",
-                      limit: int = 100,
-                      severity: Optional[str] = None,
-                      status: Optional[str] = None) -> bytes:
+    def alertes(self,
+                      
+            limit: int = 100,
+            severity: Optional[str] = None,
+            status: Optional[str] = None) -> pd.DataFrame:
         """
         Exporte les alertes dans différents formats.
         
@@ -737,15 +724,15 @@ class AppiClient:
         Returns:
             Alertes exportées en bytes
         """
-        return self.exporter.export_alertes(
-            format=format,
+        return self.exporter.alertes_to_dataframe(
+            #format=format,
             limit=limit,
             severity=severity,
             status=status
         )
     
-    def export_alertes_to_file(self,
-                          filepath: str,
+    def alertes_to_file(self,
+                          filepath: Optional[str] = None,
                           limit: int = 100,
                           severity: Optional[str] = None,
                           status: Optional[str] = None,
@@ -769,6 +756,14 @@ class AppiClient:
                 severity=severity,
                 status=status
             )
+            
+             # Si aucun filepath n'est fourni, utiliser le répertoire courant
+            if filepath is None:
+                import os
+                from datetime import datetime
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                filename = f"alertes_data_{timestamp}"
+                filepath = os.path.join(os.getcwd(), filename)
             
             # Convertir en DataFrame
             if alertes:
@@ -816,32 +811,6 @@ class AppiClient:
 
     # ==================== OUTILS D'ANALYSE ====================
     
-    def get_time_series(self,
-                       date_debut: str,
-                       date_fin: str,
-                       frequency: str = "W",
-                       region: str = "Toutes",
-                       district: str = "Toutes") -> pd.DataFrame:
-        """
-        Récupère une série temporelle des données.
-        
-        Args:
-            date_debut: Date de début
-            date_fin: Date de fin
-            frequency: Fréquence (W: hebdomadaire, M: mensuel)
-            region: Région
-            district: District
-            
-        Returns:
-            DataFrame avec la série temporelle
-        """
-        return self.analyzer.get_time_series(
-            date_debut=date_debut,
-            date_fin=date_fin,
-            frequency=frequency,
-            region=region,
-            district=district
-        )
     
     def detect_anomalies(self, data: pd.DataFrame) -> pd.DataFrame:
         """
@@ -914,8 +883,9 @@ class AppiClient:
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Nettoyage lors de la sortie du context manager."""
         self.session.close()
-    
-    def resume(self) -> Dict[str, Any]:
+
+    # ==================== RESUME ====================
+    def resume(self,limit: int = None,date_debut: Optional[str] = None,date_fin: Optional[str] = None) -> Dict[str, Any]:
         """
         Génère un résumé statistique complet et professionnel de la base de données.
         
@@ -941,7 +911,7 @@ class AppiClient:
         """
         try:
             # Récupérer toutes les données
-            df = self.data()
+            df = self.data(limit=limit,date_debut=date_debut,date_fin=date_fin)
             
             if df.empty:
                 return {
@@ -1044,8 +1014,9 @@ class AppiClient:
             }
             
             # 4. Dernière mise à jour (utiliser la date la plus récente)
-            derniere_mise_a_jour = df['date_consultation'].max().strftime("%Y-%m-%dT%H:%M:%S") if not df['date_consultation'].isna().all() else None
-            
+            date_ = self._make_request("GET", "/api/derniere-mise-a-jour")
+
+            derniere_mise_a_jour = date_["derniere_mise_a_jour"] if date_["statut"] == True else "Date non trouvée"
             return {
                 "success": True,
                 "message": f"Résumé de la base de données généré avec succès - {len(df)} enregistrements analysés",
@@ -1068,7 +1039,7 @@ class AppiClient:
                 "qualite_donnees": {}
             }
     
-    def resume_display(self, verbose: bool = True, show_details: bool = True, graph: bool = False) -> None:
+    def resume_display(self, limit: int = None, verbose: bool = True, show_details: bool = True, graph: bool = False,date_debut: Optional[str] = None,date_fin: Optional[str] = None) -> None:
         """
         Affiche un résumé statistique professionnel de la base de données dans la console.
         
@@ -1085,7 +1056,7 @@ class AppiClient:
         """
         try:
             # Récupérer le résumé
-            resume_data = self.resume()
+            resume_data = self.resume(limit=limit,date_debut=date_debut,date_fin=date_fin)
             
             if not resume_data.get('success'):
                 print(f"❌ Erreur: {resume_data.get('message')}")
@@ -1206,7 +1177,7 @@ class AppiClient:
             print(f"❌ Erreur lors de l'affichage du résumé: {str(e)}")
             self.logger.error(f"Erreur lors de l'affichage du résumé: {e}")
     
-    def _display_graphs(self, resume_data: Dict[str, Any]) -> None:
+    def _display_graphs(self, resume_data: Dict[str, Any], limit: int = None,date_debut: Optional[str] = None,date_fin: Optional[str] = None) -> None:
         """
         Affiche des graphiques descriptifs pour les variables de la base de données.
         
@@ -1225,7 +1196,7 @@ class AppiClient:
             sns.set_palette("husl")
             
             # Récupérer les données
-            df = self.data()
+            df = self.data(limit=limit,date_debut=date_debut,date_fin=date_fin)
             if df.empty:
                 print("⚠️  Aucune donnée disponible pour les graphiques")
                 return
@@ -1256,6 +1227,8 @@ class AppiClient:
             
             # Graphiques pour les variables numériques
             for var, stats in numeriques.items():
+                if var in ['idCas', 'id_source']:
+                    continue  # Ne pas afficher les identifiants
                 if plot_idx > total_graphs:
                     break
                     
@@ -1269,12 +1242,17 @@ class AppiClient:
                     plt.hist(data_clean, bins=min(20, len(data_clean)//5), 
                             alpha=0.7, density=True, color='skyblue', edgecolor='black')
                     
-                    # Courbe de densité
-                    if len(data_clean) > 10:
+                    # Courbe de densité uniquement si plus d'une valeur unique
+                    if len(data_clean) > 10 and data_clean.nunique() > 1:
                         from scipy import stats
                         kde_x = np.linspace(data_clean.min(), data_clean.max(), 100)
-                        kde = stats.gaussian_kde(data_clean)
-                        plt.plot(kde_x, kde(kde_x), 'r-', linewidth=2, label='Densité')
+                        try:
+                            kde = stats.gaussian_kde(data_clean)
+                            plt.plot(kde_x, kde(kde_x), 'r-', linewidth=2, label='Densité')
+                        except Exception as kde_err:
+                            print(f"⚠️  Densité non tracée pour {var}: {kde_err}")
+                    else:
+                        print(f"⚠️  Densité non tracée pour {var}: données constantes ou insuffisantes.")
                     
                     plt.title(f'Distribution de {var}', fontweight='bold')
                     plt.xlabel(var)
@@ -1292,7 +1270,7 @@ class AppiClient:
                 plot_idx += 1
             
             # Graphiques pour les variables qualitatives (top 5)
-            qual_vars = list(qualitatives.items())[:5]
+            qual_vars = [(k, v) for k, v in list(qualitatives.items())[:5] if k not in ['idCas', 'id_source']]
             for var, stats in qual_vars:
                 if plot_idx > total_graphs:
                     break

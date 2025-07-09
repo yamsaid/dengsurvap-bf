@@ -95,7 +95,8 @@ class DataExporter:
                 format=format
             )
     
-    def export_alertes(self,
+    # les alertes sont exportées en json, csv, xlsx
+    def alertes(self,
                       format: str = "csv",
                       limit: int = 100,
                       severity: Optional[str] = None,
@@ -150,7 +151,43 @@ class DataExporter:
                 format=format
             )
     
-    def export_rapport(self,
+    # recupere les alertes en dataframe
+    def alertes_to_dataframe(self,
+                            limit: int = 100,
+                            severity: Optional[str] = None,
+                            status: Optional[str] = None) -> pd.DataFrame:
+        """
+        Exporte les alertes et retourne un DataFrame pandas.
+        
+        Args:
+            limit: Nombre maximum d'alertes
+            severity: Sévérité
+            status: Statut
+        
+        Returns:
+            DataFrame avec les alertes
+        
+        Raises:
+            DataExportError: En cas d'erreur d'export ou de conversion
+        """
+        try:
+            data_bytes = self.alertes(format="json", limit=limit, severity=severity, status=status)
+            import json
+            data = json.loads(data_bytes.decode('utf-8'))
+            if isinstance(data, list):
+                df = pd.DataFrame(data)
+            elif isinstance(data, dict) and 'data' in data:
+                df = pd.DataFrame(data['data'])
+            else:
+                df = pd.DataFrame([data])
+            self.logger.info(f"Export des alertes vers DataFrame réussi: {len(df)} lignes")
+            return df
+        except Exception as e:
+            self.logger.error(f"Erreur lors de l'export des alertes vers DataFrame: {e}")
+            raise DataExportError(f"Impossible d'exporter les alertes vers DataFrame: {e}")
+    
+    # exporte un rapport d'analyse
+    def rapport(self,
                       format: str = "json",
                       date_debut: Optional[str] = None,
                       date_fin: Optional[str] = None) -> bytes:
@@ -200,7 +237,8 @@ class DataExporter:
                 format=format
             )
     
-    def export_donnees_corrigees(self,
+    # exporte les données corrigées
+    def donnees_corrigees(self,
                                 format: str = "csv",
                                 date_debut: Optional[str] = None,
                                 date_fin: Optional[str] = None) -> bytes:
@@ -250,6 +288,7 @@ class DataExporter:
                 format=format
             )
     
+    # exporte les données vers un dataframe
     def export_to_dataframe(self,
                            date_debut: Optional[str] = None,
                            date_fin: Optional[str] = None,
@@ -301,6 +340,7 @@ class DataExporter:
             self.logger.error(f"Erreur lors de l'export vers DataFrame: {e}")
             raise DataExportError(f"Impossible d'exporter vers DataFrame: {e}")
     
+    # sauvegarde les données exportées dans un fichier
     def save_to_file(self,
                     data_bytes: bytes,
                     file_path: str,
@@ -334,6 +374,7 @@ class DataExporter:
                 format=format
             )
     
+    # exporte et sauvegarde les données en une seule opération
     def export_and_save(self,
                        file_path: str,
                        format: str = "csv",
@@ -357,6 +398,7 @@ class DataExporter:
             self.logger.error(f"Erreur lors de l'export et sauvegarde: {e}")
             raise DataExportError(f"Impossible d'exporter et sauvegarder: {e}")
     
+    # récupère la liste des formats d'export supportés
     def get_export_formats(self) -> List[str]:
         """
         Récupère la liste des formats d'export supportés.
@@ -366,6 +408,7 @@ class DataExporter:
         """
         return self.supported_formats.copy()
     
+    # valide les données exportées
     def validate_export_data(self, data_bytes: bytes, format: str) -> bool:
         """
         Valide les données exportées.

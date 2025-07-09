@@ -73,9 +73,9 @@ def main():
         start_date = end_date - timedelta(days=7)
         
         cas = client.get_cas_dengue(
-            date_debut=start_date.strftime("%Y-%m-%d"),
-            date_fin=end_date.strftime("%Y-%m-%d"),
-            limit=10
+            annee=2024,
+            mois=1,
+            region="Centre"
         )
         
         print(f"🦟 Cas de dengue récupérés: {len(cas)}")

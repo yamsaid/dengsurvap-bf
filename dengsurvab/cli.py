@@ -155,11 +155,9 @@ def handle_cas(client, args):
     
     try:
         cas = client.get_cas_dengue(
-            date_debut=args.date_debut,
-            date_fin=args.date_fin,
-            region=args.region,
-            district=args.district,
-            limit=args.limit
+            annee=2024,
+            mois=1,
+            region=args.region
         )
         
         print(f"\n📋 Cas récupérés: {len(cas)}")
