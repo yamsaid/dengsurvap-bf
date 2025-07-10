@@ -1,125 +1,138 @@
+#!/usr/bin/env python3
 """
-Exemple d'utilisation de base du client Appi Dengue
+Exemple d'utilisation basique du client Appi Dengue
 
-Ce script montre comment utiliser les fonctionnalités principales
-du client pour accéder aux données de surveillance de la dengue.
+Ce script démontre les fonctionnalités principales du client :
+- Authentification
+- Récupération de données
+- Gestion des alertes
+- Export de données
+- Analyses épidémiologiques
 """
-# dengsurvap-bf # Dengue Surveillance API for Burkina Faso
-# pip install dengsurvap-bf
-# Importation des bibliothèques nécessaires
+
+import sys
 import os
 from datetime import datetime, timedelta
+
+# Ajouter le répertoire parent au path pour importer le package
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from dengsurvab import AppiClient
 
-# Fonction principale
 def main():
-    """Exemple principal d'utilisation du client."""
+    """Exemple d'utilisation basique du client."""
     
-    # Configuration du client
-    # Vous pouvez utiliser des variables d'environnement ou configurer directement
-    base_url = os.getenv('APPI_API_URL', 'https://votre-api-appi.com')
-    api_key = os.getenv('APPI_API_KEY', 'votre-clé-api')
+    print("🚀 EXEMPLE D'UTILISATION - CLIENT APPI DENGUE")
+    print("=" * 60)
     
-    print("=== Client Appi Dengue - Exemple d'utilisation ===\n")
+    # Configuration
+    API_URL = "https://api.appi.com"  # Remplacez par votre URL
+    EMAIL = "user@example.com"         # Remplacez par votre email
+    PASSWORD = "password"               # Remplacez par votre mot de passe
     
     # Initialisation du client
-    print("1. Initialisation du client...")
-    client = AppiClient(
-        base_url=base_url,
-        api_key=api_key,
-        debug=True  # Activer les logs détaillés
-    )
+    print("\n1. Initialisation du client...")
+    try:
+        client = AppiClient(API_URL)
+        print(f"✅ Client initialisé avec l'URL: {API_URL}")
+    except Exception as e:
+        print(f"❌ Erreur lors de l'initialisation: {e}")
+        return
     
-    # Authentification (optionnelle si vous avez une clé API)
+    # Authentification
     print("\n2. Authentification...")
     try:
-        # Remplacez par vos identifiants
-        auth_result = client.authenticate("votre-email@example.com", "votre-mot-de-passe")
-        print(f"✅ Authentification réussie pour {auth_result.get('user', {}).get('email', 'N/A')}")
+        success = client.authenticate(EMAIL, PASSWORD)
+        if success:
+            print("✅ Authentification réussie")
+        else:
+            print("❌ Échec de l'authentification")
+            return
     except Exception as e:
-        print(f"⚠️  Authentification échouée: {e}")
-        print("Continuing without authentication...")
+        print(f"❌ Erreur lors de l'authentification: {e}")
+        return
     
-    # Récupération des statistiques générales
-    print("\n3. Récupération des statistiques...")
+    # Vérification de la connexion
+    print("\n3. Vérification de la connexion...")
+    try:
+        if client.is_authenticated():
+            print("✅ Connexion active")
+        else:
+            print("❌ Connexion inactive")
+            return
+    except Exception as e:
+        print(f"❌ Erreur lors de la vérification: {e}")
+        return
+    
+    # Récupération des données de base
+    print("\n4. Récupération des données de base...")
+    try:
+        # Données hebdomadaires (DataFrame)
+        df_hebdo = client.get_cas_dengue(annee=2024, mois=1)
+        print(f"📊 Données hebdomadaires récupérées: {len(df_hebdo)} semaines")
+        
+        if not df_hebdo.empty:
+            print(f"   Total cas positifs: {df_hebdo['cas_positifs'].sum()}")
+            print(f"   Moyenne par semaine: {df_hebdo['cas_positifs'].mean():.1f}")
+            print(f"   Pic hebdomadaire: {df_hebdo['cas_positifs'].max()}")
+    except Exception as e:
+        print(f"❌ Erreur lors de la récupération des données: {e}")
+    
+    # Récupération des statistiques
+    print("\n5. Récupération des statistiques...")
     try:
         stats = client.get_stats()
-        print(f"📊 Statistiques générales:")
-        print(f"   - Total cas: {stats.total_cas}")
-        print(f"   - Cas positifs: {stats.total_positifs}")
-        print(f"   - Hospitalisations: {stats.total_hospitalisations}")
-        print(f"   - Décès: {stats.total_deces}")
-        print(f"   - Régions actives: {len(stats.regions_actives)}")
+        print(f"📈 Statistiques récupérées: {len(stats)} indicateurs")
+        
+        if not stats.empty:
+            print(f"   Total cas: {stats['total_cas'].iloc[0] if 'total_cas' in stats.columns else 'N/A'}")
+            print(f"   Total positifs: {stats['cas_positifs'].iloc[0] if 'cas_positifs' in stats.columns else 'N/A'}")
     except Exception as e:
         print(f"❌ Erreur lors de la récupération des statistiques: {e}")
     
-    # Récupération des régions et districts
-    print("\n4. Récupération des régions et districts...")
+    # Récupération des indicateurs par période
+    print("\n6. Récupération des indicateurs par période...")
     try:
-        regions = client.get_regions()
-        print(f"🏛️  Régions disponibles: {regions}")
+        # Calculer les dates pour le dernier mois
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=30)
         
-        if regions:
-            districts = client.get_districts(region=regions[0])
-            print(f"📍 Districts de {regions[0]}: {districts[:5]}...")  # Afficher les 5 premiers
-    except Exception as e:
-        print(f"❌ Erreur lors de la récupération des régions: {e}")
-    
-    # Récupération des cas de dengue
-    print("\n5. Récupération des cas de dengue...")
-    try:
-        # Date de la dernière semaine
-        end_date = datetime.now().date()
-        start_date = end_date - timedelta(days=7)
-        
-        cas = client.get_cas_dengue(
-            annee=2024,
-            mois=1,
-            region="Centre"
-        )
-        
-        print(f"🦟 Cas de dengue récupérés: {len(cas)}")
-        if cas:
-            print(f"   Premier cas: {cas[0].date_consultation} - {cas[0].region}")
-            print(f"   Dernier cas: {cas[-1].date_consultation} - {cas[-1].region}")
-    except Exception as e:
-        print(f"❌ Erreur lors de la récupération des cas: {e}")
-    
-    # Récupération des indicateurs hebdomadaires
-    print("\n6. Récupération des indicateurs hebdomadaires...")
-    try:
-        indicateurs = client.data_period(
+        indicateurs = client.donnees_par_periode(
             date_debut=start_date.strftime("%Y-%m-%d"),
             date_fin=end_date.strftime("%Y-%m-%d"),
             region="Toutes"
         )
         
         print(f"📈 Indicateurs hebdomadaires récupérés: {len(indicateurs)}")
-        if indicateurs:
-            latest = indicateurs[-1]
-            print(f"   Dernière semaine: {latest.date_debut} - {latest.date_fin}")
-            print(f"   Total cas: {latest.total_cas}")
-            print(f"   Taux positivité: {latest.taux_positivite:.1f}%")
-            print(f"   Taux hospitalisation: {latest.taux_hospitalisation:.1f}%")
+        if not indicateurs.empty:
+            latest = indicateurs.iloc[-1]
+            print(f"   Dernière semaine: {latest.get('date_debut', 'N/A')} - {latest.get('date_fin', 'N/A')}")
+            print(f"   Total cas: {latest.get('total_cas', 'N/A')}")
+            print(f"   Taux positivité: {latest.get('taux_positivite', 'N/A')}")
+            print(f"   Taux hospitalisation: {latest.get('taux_hospitalisation', 'N/A')}")
     except Exception as e:
         print(f"❌ Erreur lors de la récupération des indicateurs: {e}")
     
     # Récupération des alertes
     print("\n7. Récupération des alertes...")
     try:
-        alertes = client.get_alertes(limit=5)
-        print(f"🚨 Alertes récupérées: {len(alertes)}")
+        df_alertes = client.get_alertes(limit=5)
+        print(f"🚨 Alertes récupérées: {len(df_alertes)}")
         
-        for alerte in alertes[:3]:  # Afficher les 3 premières
-            print(f"   - {alerte.severity}: {alerte.message}")
+        if not df_alertes.empty:
+            for _, alerte in df_alertes.head(3).iterrows():
+                print(f"   - {alerte.get('severity', 'N/A')}: {alerte.get('message', 'N/A')}")
     except Exception as e:
         print(f"❌ Erreur lors de la récupération des alertes: {e}")
     
     # Export de données
     print("\n8. Export de données...")
     try:
+        from dengsurvab import DataExporter
+        exporter = DataExporter(client)
+        
         # Export au format CSV
-        csv_data = client.export_data(
+        csv_data = exporter.export_data(
             format="csv",
             date_debut=start_date.strftime("%Y-%m-%d"),
             date_fin=end_date.strftime("%Y-%m-%d"),
@@ -137,25 +150,17 @@ def main():
     # Analyse épidémiologique
     print("\n9. Analyse épidémiologique...")
     try:
-        # Récupérer une série temporelle
-        series = client.get_time_series(
-            date_debut=(end_date - timedelta(days=30)).strftime("%Y-%m-%d"),
-            date_fin=end_date.strftime("%Y-%m-%d"),
-            region="Toutes"
-        )
-        
-        print(f"📊 Série temporelle générée: {len(series)} points")
-        
         # Calculer les taux
-        rates = client.calculate_rates(
+        df_rates = client.calculate_rates(
             date_debut=(end_date - timedelta(days=30)).strftime("%Y-%m-%d"),
             date_fin=end_date.strftime("%Y-%m-%d")
         )
         
         print(f"📈 Taux calculés:")
-        print(f"   - Positivité: {rates.get('taux_positivite', 0):.1f}%")
-        print(f"   - Hospitalisation: {rates.get('taux_hospitalisation', 0):.1f}%")
-        print(f"   - Létalité: {rates.get('taux_letalite', 0):.1f}%")
+        if not df_rates.empty:
+            print(f"   - Positivité: {df_rates['taux_positivite'].iloc[0]:.1f}%")
+            print(f"   - Hospitalisation: {df_rates['taux_hospitalisation'].iloc[0]:.1f}%")
+            print(f"   - Létalité: {df_rates['taux_letalite'].iloc[0]:.1f}%")
         
     except Exception as e:
         print(f"❌ Erreur lors de l'analyse: {e}")
@@ -177,9 +182,25 @@ def main():
     except Exception as e:
         print(f"❌ Erreur lors de la configuration des alertes: {e}")
     
+    # Résumé statistique
+    print("\n11. Résumé statistique...")
+    try:
+        # MIGRATION : Les fonctions resume/resume_display sont remplacées par resumer, graph_desc, evolution
+        # Exemple :
+        # client.resumer(annee=2024, region="Centre")
+        # client.graph_desc(date_debut="2024-01-01", date_fin="2024-12-31")
+        # client.evolution(by="sexe", frequence="M", taux_croissance=True)
+        resume = client.resumer(limit=100, annee=2024)
+        print(f"📊 Résumé généré:")
+        print(f"   - Total enregistrements: {resume['informations_generales']['total_enregistrements']}")
+        print(f"   - Période couverture: {resume['periode_couverture']['debut']} à {resume['periode_couverture']['fin']}")
+        print(f"   - Variables numériques: {len(resume['variables']['numeriques'])}")
+        print(f"   - Variables qualitatives: {len(resume['variables']['qualitatives'])}")
+    except Exception as e:
+        print(f"❌ Erreur lors du résumé: {e}")
+    
     print("\n=== Exemple terminé ===")
     print("📚 Consultez la documentation pour plus d'exemples et de fonctionnalités.")
-
 
 if __name__ == "__main__":
     main() 

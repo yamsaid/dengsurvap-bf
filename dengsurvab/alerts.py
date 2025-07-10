@@ -69,17 +69,21 @@ class AlertManager:
         
         try:
             data = self.client._make_request("GET", "/api/alerts/logs", params=params)
-            
             alertes = []
-            for alerte_data in data.get('data', []):
+            # Compatibilité : data peut être un dict (API) ou une liste (mock/test)
+            if isinstance(data, dict):
+                alertes_data = data.get('data', [])
+            elif isinstance(data, list):
+                alertes_data = data
+            else:
+                alertes_data = []
+            for alerte_data in alertes_data:
                 try:
                     alerte = AlertLog(**alerte_data)
                     alertes.append(alerte)
                 except Exception as e:
                     self.logger.warning(f"Erreur de validation de l'alerte: {e}")
-            
             return alertes
-            
         except Exception as e:
             self.logger.error(f"Erreur lors de la récupération des alertes: {e}")
             raise APIError(f"Impossible de récupérer les alertes: {e}")

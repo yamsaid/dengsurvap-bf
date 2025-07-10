@@ -38,7 +38,7 @@ def main():
     print("   Paramètres: verbose=True, show_details=True, graph=True")
     
     try:
-        client.resume_display(
+        client.graph_desc(
             verbose=True,      # Afficher tous les détails
             show_details=True, # Statistiques détaillées
             graph=True        # Afficher les graphiques
@@ -53,7 +53,7 @@ def main():
     print("   Paramètres: verbose=False, show_details=False, graph=False")
     
     try:
-        client.resume_display(
+        client.graph_desc(
             verbose=False,     # Affichage simplifié
             show_details=False, # Pas de détails
             graph=False       # Pas de graphiques
@@ -68,7 +68,7 @@ def main():
     print("   Paramètres: verbose=False, show_details=False, graph=True")
     
     try:
-        client.resume_display(
+        client.graph_desc(
             verbose=False,     # Affichage simplifié
             show_details=False, # Pas de détails
             graph=True        # Afficher les graphiques

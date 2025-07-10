@@ -356,3 +356,41 @@ class APIResponse(BaseModel):
     message: str = Field(description="Message de réponse")
     data: Optional[Dict[str, Any]] = Field(None, description="Données de la réponse")
     errors: Optional[List[str]] = Field(None, description="Liste des erreurs") 
+
+
+class DonneesHebdomadaires(BaseModel):
+    """
+    Modèle pour les données hebdomadaires de l'API.
+    
+    Ce modèle correspond aux données retournées par l'endpoint /api/data/hebdomadaires
+    qui contient des statistiques agrégées par semaine.
+    """
+    
+    model_config = ConfigDict(from_attributes=True)
+    
+    annee: int = Field(description="Année")
+    semaine: int = Field(description="Numéro de semaine")
+    region: Optional[str] = Field(None, description="Région")
+    district: Optional[str] = Field(None, description="District")
+    total_cas: int = Field(ge=0, description="Nombre total de cas")
+    suspects: int = Field(ge=0, description="Nombre de cas suspects")
+    positifs: int = Field(ge=0, description="Nombre de cas positifs")
+    negatifs: int = Field(ge=0, description="Nombre de cas négatifs")
+    hospitalises: int = Field(ge=0, description="Nombre d'hospitalisations")
+    deces: int = Field(ge=0, description="Nombre de décès")
+    
+    @field_validator("semaine")
+    @classmethod
+    def validate_semaine(cls, v):
+        """Valide le numéro de semaine."""
+        if v < 1 or v > 53:
+            raise ValueError("Le numéro de semaine doit être entre 1 et 53")
+        return v
+    
+    @field_validator("annee")
+    @classmethod
+    def validate_annee(cls, v):
+        """Valide l'année."""
+        if len(str(v)) != 4 or int(v) < 0:
+            raise ValueError("L'année doit être un nombre entier de 4 chiffres")
+        return v 

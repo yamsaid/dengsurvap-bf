@@ -3,10 +3,13 @@ import os
 
 # Ajouter le chemin du package dengsurvap-bf
 current_dir = os.path.dirname(os.path.abspath(__file__))
-dengsurvap_path = os.path.join(current_dir, 'dengsurvap-bf')
-sys.path.insert(0, dengsurvap_path)
+#   dengsurvap_path = os.path.join(current_dir, 'dengsurvap-bf')
+parent_dir = os.path.dirname(current_dir)  # Remonter d'un niveau depuis scripts/
+sys.path.insert(0, parent_dir)
+#sys.path.insert(0, dengsurvap_path)
 
 from dengsurvab import AppiClient
+from dengsurvab.analytics import SyntheseBase 
 #import requests
 import json
 from datetime import datetime
@@ -166,6 +169,19 @@ client.save_to_file(
 
 #print(client.donnees_par_periode(date_debut="2024-01-01", date_fin="2025-07-01"))
 
-print(client.resume_display())
+#print(client.donnees_par_periode(date_debut="2024-01-01", date_fin="2025-07-01", region="Centre"))
 
+#print(client.resume_display(graph=True,max_graphs=4, use_aggregated=False))
+synth = SyntheseBase(client=client)
+df = client.data(date_debut="2024-01-01", date_fin="2025-07-01", region="Centre",limit=20)
+#synth = SyntheseBase(df)
+
+#print(synth.resumer(df=df))
+#print(client.resumer(date_debut="2024-01-01", date_fin="2025-07-01", region="Centre",detail=True,limit=20))
+#print(synth.graph_desc(date_debut="2024-01-01", date_fin="2025-07-01", region="Centre",detail=True,limit=20))
+#ynth.graph_desc(date_debut="2024-01-01", date_fin="2025-07-01", region="Centre",limit=20, save_dir="./figures")
+#synth.evolution(by='sexe',date_debut="2024-01-01", date_fin="2025-07-01", region="Centre",limit=20,max_graph=2)
+#synth.evolution(df)
+
+#print(synth._prepare_df(df))
 

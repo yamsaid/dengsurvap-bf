@@ -10,8 +10,9 @@
 6. [Modules spécialisés](#modules-spécialisés)
 7. [Gestion des erreurs](#gestion-des-erreurs)
 8. [Exemples d'utilisation](#exemples-dutilisation)
-9. [Tests et qualité](#tests-et-qualité)
-10. [Déploiement](#déploiement)
+9. [Migration et nouvelles méthodes](#migration-et-nouvelles-méthodes)
+10. [Tests et qualité](#tests-et-qualité)
+11. [Déploiement](#déploiement)
 
 ---
 
@@ -371,6 +372,97 @@ exporter.save_to_file(data_csv, "donnees.csv", "csv")
 
 ---
 
+## 🧩 Classe avancée : SyntheseBase
+
+La classe `SyntheseBase` est le cœur de l'analyse descriptive, graphique et temporelle du package. Elle est utilisée en interne par le client, mais peut aussi être instanciée directement pour des analyses personnalisées sur n'importe quel DataFrame compatible.
+
+### Présentation générale
+
+`SyntheseBase` permet de :
+- Résumer la base de données (statistiques, structure, informations générales)
+- Générer des visualisations descriptives (camemberts, barres, histogrammes)
+- Analyser l'évolution temporelle (par semaine/mois, par sous-groupes, avec taux de croissance)
+
+Elle s'appuie sur pandas, matplotlib et seaborn pour garantir des analyses rapides, robustes et visuellement agréables.
+
+### Fonctionnement des principales méthodes
+
+#### 1. `resumer`
+Cette méthode affiche un résumé structuré et enrichi de la base de données :
+- Période de couverture (date de début, date de fin, durée)
+- Nombre d'observations, de régions, de districts
+- Dernière mise à jour (si disponible via l'API)
+- Statistiques quantitatives (min, max, moyenne, quartiles, valeurs manquantes)
+- Statistiques qualitatives (type, mode, nombre de modalités, valeurs manquantes)
+- Détail des modalités (optionnel)
+
+Elle accepte de nombreux filtres (année, région, district, dates, etc.) pour cibler l'analyse.
+
+#### 2. `graph_desc`
+Cette méthode génère des graphiques descriptifs adaptés à chaque variable :
+- Diagrammes en barres pour les variables à nombreuses modalités (district, région...)
+- Camemberts pour les variables à peu de modalités (sexe, issue, serotype...)
+- Histogramme et boxplot pour l'âge
+
+Les graphiques peuvent être affichés à l'écran ou sauvegardés dans un dossier. Tous les filtres temporels et géographiques sont disponibles.
+
+#### 3. `evolution`
+Cette méthode analyse l'évolution des variables cibles (issue, hospitalisation, resultat_test) par période (semaine ou mois), globalement ou par sous-groupes (ex : sexe, région, district, etc.).
+- Génère des courbes d'évolution, des graphiques de croissance absolue et en pourcentage
+- Permet de choisir la fréquence (hebdomadaire ou mensuelle), d'afficher ou non les taux de croissance, et de limiter le nombre de graphiques
+
+### Exemples d'utilisation Python
+
+```python
+from dengsurvab.analytics import SyntheseBase
+from dengsurvab import AppiClient
+
+client = AppiClient()
+synth = SyntheseBase(client=client)
+
+# Résumé statistique
+synth.resumer(annee=2024, region="Centre", detail=True)
+
+# Visualisation descriptive
+synth.graph_desc(date_debut="2024-01-01", date_fin="2024-12-31", save_dir="./figures")
+
+# Analyse temporelle avancée
+synth.evolution(by="sexe", frequence="M", taux_croissance=True, max_graph=6)
+```
+
+Il est aussi possible d'utiliser un DataFrame pandas directement :
+```python
+import pandas as pd
+df = pd.read_csv("mes_donnees.csv")
+synth = SyntheseBase(df=df)
+synth.resumer()
+```
+
+### Utilisation avec la CLI (dab)
+
+Les fonctionnalités de SyntheseBase sont accessibles en ligne de commande via `dab` :
+
+- Résumé statistique :
+```bash
+dab resumer --annee 2024 --region "Centre" --detail
+```
+- Visualisation descriptive :
+```bash
+dab graph-desc --date-debut 2024-01-01 --date-fin 2024-12-31 --save-dir ./figures
+```
+- Analyse temporelle :
+```bash
+dab evolution --by sexe --frequence M --taux-croissance --max-graph 6
+```
+
+### Bonnes pratiques et cas d'usage
+- Utilisez les filtres pour limiter la quantité de données analysées et accélérer les traitements.
+- Les graphiques peuvent être sauvegardés pour intégration dans des rapports ou des dashboards.
+- La méthode `resumer` affiche automatiquement les informations générales, la période de couverture, et la dernière mise à jour (si disponible via l'API).
+- Pour des analyses personnalisées, instanciez `SyntheseBase` avec un DataFrame local.
+
+---
+
 ## 🚨 Gestion des erreurs
 
 ### Exceptions disponibles
@@ -522,64 +614,6 @@ exporter.save_to_file(rapport_excel, "rapport_epidemio.xlsx", "xlsx")
 
 print("Exports terminés avec succès")
 ```
-
----
-
-## �� Fonctions de résumé et d'analyse
-
-Le package offre deux méthodes principales pour générer des résumés statistiques complets de la base de données :
-
-### `resume()` - Résumé structuré
-Cette méthode retourne un dictionnaire JSON structuré contenant toutes les statistiques descriptives (période de couverture, informations générales, analyse des variables, qualité des données). Idéal pour l'intégration dans des applications ou l'analyse programmatique.
-
-```python
-# Résumé complet en JSON
-resume_data = client.resume(limit=100)
-print(f"Total enregistrements: {resume_data['informations_generales']['total_enregistrements']}")
-print(f"Taux de complétude: {resume_data['qualite_donnees']['taux_completude_global']}%")
-```
-
-### `resume_display()` - Affichage console avec graphiques
-Cette méthode génère un affichage formaté directement dans la console, similaire aux méthodes `info()` et `describe()` de pandas. Elle peut inclure des graphiques descriptifs pour une visualisation immédiate.
-
-```python
-# Affichage complet avec graphiques
-client.resume_display(
-    verbose=True,      # Afficher tous les détails
-    show_details=True, # Statistiques détaillées
-    graph=True        # Afficher les graphiques
-)
-
-# Affichage simplifié sans graphiques
-client.resume_display(
-    verbose=False,     # Affichage concis
-    show_details=False, # Pas de détails
-    graph=False       # Pas de graphiques
-)
-```
-
-### Utilisation via la CLI
-Les fonctions de résumé sont également accessibles via la commande `dab` :
-
-```bash
-# Résumé simple
-dab resume
-
-# Résumé avec graphiques
-dab resume --graph
-
-# Résumé détaillé
-dab resume --verbose --show-details
-
-# Résumé avec limite d'enregistrements
-dab resume --limit 1000
-```
-
-Ces fonctions sont particulièrement utiles pour :
-- **Audit de données** : Vérifier la qualité et la complétude des données
-- **Reporting** : Générer des rapports statistiques automatiques
-- **Monitoring** : Surveiller l'évolution de la base de données
-- **Analyse exploratoire** : Comprendre rapidement la structure des données
 
 ---
 
@@ -770,3 +804,127 @@ dab regions
 ```bash
 dab districts --region <nom>
 ```
+
+---
+
+## Changements de version
+
+### Version 0.2.0 - Changements majeurs
+
+#### 🔄 Modifications des types de retour
+
+**ATTENTION** : Cette version introduit des changements importants dans les types de retour de plusieurs méthodes pour améliorer la compatibilité avec pandas et les outils d'analyse.
+
+##### `get_cas_dengue()`
+- **AVANT** : `List[DonneesHebdomadaires]`
+- **APRÈS** : `pandas.DataFrame`
+- **Impact** : Meilleure intégration avec les workflows pandas
+
+```python
+# Ancien usage
+donnees = client.get_cas_dengue(annee=2024, mois=1)
+for semaine in donnees:
+    print(semaine.cas_positifs)
+
+# Nouveau usage
+df = client.get_cas_dengue(annee=2024, mois=1)
+print(df['cas_positifs'].sum())
+```
+
+##### `get_alertes()`
+- **AVANT** : `List[AlertLog]`
+- **APRÈS** : `pandas.DataFrame`
+- **Amélioration** : Nettoyage automatique des tuples dans les données
+
+```python
+# Ancien usage
+alertes = client.get_alertes(limit=10)
+for alerte in alertes:
+    print(alerte.message)
+
+# Nouveau usage
+df_alertes = client.get_alertes(limit=10)
+print(f"Alertes critiques: {len(df_alertes[df_alertes['severity'] == 'critical'])}")
+```
+
+##### `calculate_rates()`
+- **AVANT** : `Dict[str, Any]`
+- **APRÈS** : `pandas.DataFrame`
+- **Amélioration** : Plus facile à manipuler et à intégrer dans des analyses
+
+```python
+# Ancien usage
+rates = client.calculate_rates(date_debut="2024-01-01", date_fin="2024-01-31")
+print(f"Taux positivité: {rates['taux_positivite']}%")
+
+# Nouveau usage
+df_rates = client.calculate_rates(date_debut="2024-01-01", date_fin="2024-01-31")
+print(f"Taux positivité: {df_rates['taux_positivite'].iloc[0]}%")
+```
+
+##### `detect_anomalies()`
+- **Nouvelles fonctionnalités** :
+  - Sélection des colonnes à analyser
+  - Choix de la méthode de détection (zscore, iqr, isolation_forest)
+  - Meilleure gestion des erreurs
+
+```python
+# Ancien usage
+anomalies = client.detect_anomalies(df)
+
+# Nouveau usage
+anomalies = client.detect_anomalies(
+    df, 
+    columns=['cas_positifs', 'hospitalisations'],
+    method="zscore"
+)
+```
+
+#### 📊 Méthodes de statistiques unifiées
+
+Toutes les méthodes de statistiques retournent maintenant des DataFrames :
+- `get_stats()` → `pandas.DataFrame`
+- `get_taux_positivite()` → `pandas.DataFrame`
+- `get_taux_letalite()` → `pandas.DataFrame`
+- `get_taux_hospitalisation()` → `pandas.DataFrame`
+
+#### 🔧 Corrections techniques
+
+- **Gestion des colonnes dans les graphiques** : Adaptation automatique aux colonnes disponibles
+- **Optimisation des performances** : Option `full=True` pour la pagination automatique
+- **Retry automatique** : Backoff exponentiel pour les erreurs réseau
+
+#### ⚠️ Breaking Changes
+
+1. **`get_cas_dengue()`** : Changement de type de retour (List → DataFrame)
+2. **`get_alertes()`** : Changement de type de retour (List → DataFrame)
+3. **`calculate_rates()`** : Changement de type de retour (Dict → DataFrame)
+4. **Toutes les méthodes de stats** : Changement de type de retour vers DataFrame
+
+#### 🔄 Guide de migration
+
+Pour migrer du code existant :
+
+```python
+# Ancien code
+donnees = client.get_cas_dengue(annee=2024, mois=1)
+for semaine in donnees:
+    print(semaine.cas_positifs)
+
+# Nouveau code
+df = client.get_cas_dengue(annee=2024, mois=1)
+for _, row in df.iterrows():
+    print(row['cas_positifs'])
+
+# Ou encore plus simple
+print(df['cas_positifs'].tolist())
+```
+
+### Version 0.1.0 - Version initiale
+
+- Client Python complet pour l'API Appi Dengue
+- Authentification et gestion des sessions
+- Récupération des données épidémiologiques
+- Système d'alertes
+- Outils d'analyse et d'export
+- Documentation complète

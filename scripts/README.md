@@ -112,3 +112,18 @@ python -m build
 ---
 
 **Note** : Toujours tester sur TestPyPI avant de publier sur PyPI production ! 
+
+# MIGRATION : Les fonctions resume/resume_display sont remplacées par resumer, graph_desc, evolution
+
+## Nouvelles méthodes d'analyse avancée
+
+- `client.resumer(...)` : résumé statistique et structurel de la base
+- `client.graph_desc(...)` : visualisation descriptive (camemberts, barres, histogrammes)
+- `client.evolution(...)` : analyse temporelle (par semaine/mois, par sous-groupes, avec taux de croissance)
+
+### Exemples d'utilisation dans les scripts
+```python
+client.resumer(annee=2024, region="Centre")
+client.graph_desc(date_debut="2024-01-01", date_fin="2024-12-31")
+client.evolution(by="sexe", frequence="M", taux_croissance=True)
+``` 

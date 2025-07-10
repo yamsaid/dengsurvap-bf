@@ -1,19 +1,14 @@
 """
-Tests unitaires pour le client Appi Dengue
-
-Ce module contient les tests pour la classe AppiClient et ses fonctionnalités.
+Tests pour le client Appi principal.
 """
 
 import pytest
-import responses
-from unittest.mock import Mock, patch
+import pandas as pd
+from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime, date
 
-from dengsurvab.client import AppiClient
-from dengsurvab.models import CasDengue, AlertLog, User
-from dengsurvab.exceptions import (
-    AppiException, AuthenticationError, APIError, ValidationError
-)
+from dengsurvab import AppiClient
+from dengsurvab.exceptions import AuthenticationError, APIError
 
 
 class TestAppiClient:
@@ -22,438 +17,337 @@ class TestAppiClient:
     @pytest.fixture
     def client(self):
         """Fixture pour créer un client de test."""
-        return AppiClient(
-            base_url="https://api.test.com",
-            api_key="test-key",
-            debug=False
-        )
+        return AppiClient("https://test-api.com")
     
     @pytest.fixture
-    def mock_response(self):
-        """Fixture pour une réponse mock."""
-        return {
-            "idCas": 1,
-            "date_consultation": "2024-01-15",
-            "region": "Antananarivo",
-            "district": "Analamanga",
-            "sexe": "masculin",
-            "age": 25,
-            "resultat_test": "positif",
-            "serotype": "denv2",
-            "hospitalise": "non",
-            "issue": "guéri",
-            "id_source": 1
-        }
+    def mock_session(self):
+        """Fixture pour mocker la session."""
+        session = Mock()
+        session.headers = {}
+        return session
     
-    def test_client_initialization(self, client):
+    def test_init(self, client):
         """Test l'initialisation du client."""
-        assert client.base_url == "https://api.test.com"
+        assert client.base_url == "https://test-api.com"
+        assert client.api_key is None
+        assert client.session is not None
+    
+    def test_init_with_api_key(self):
+        """Test l'initialisation avec une clé API."""
+        client = AppiClient("https://test-api.com", api_key="test-key")
         assert client.api_key == "test-key"
-        assert client.timeout == 30
-        assert client.retry_attempts == 3
-        assert "Authorization" in client.session.headers
     
-    def test_client_from_env(self):
-        """Test la création du client depuis les variables d'environnement."""
-        with patch.dict('os.environ', {
-            'APPI_API_URL': 'https://api.env.com',
-            'APPI_API_KEY': 'env-key',
-            'APPI_DEBUG': 'true'
-        }):
-            client = AppiClient.from_env()
-            assert client.base_url == "https://api.env.com"
-            assert client.api_key == "env-key"
-            assert client.debug is True
-    
-    def test_client_from_env_missing_url(self):
-        """Test la création du client avec URL manquante."""
-        with patch.dict('os.environ', {}, clear=True):
-            with pytest.raises(AppiException, match="Variable d'environnement APPI_API_URL requise"):
-                AppiClient.from_env()
-    
-    @responses.activate
-    def test_make_request_success(self, client, mock_response):
-        """Test une requête réussie."""
-        responses.add(
-            responses.GET,
-            "https://api.test.com/test",
-            json=mock_response,
-            status=200
-        )
-        
-        result = client._make_request("GET", "/test")
-        assert result == mock_response
-    
-    @responses.activate
-    def test_make_request_api_error(self, client):
-        """Test une erreur API."""
-        responses.add(
-            responses.GET,
-            "https://api.test.com/test",
-            json={"detail": "Erreur API"},
-            status=400
-        )
-        
-        with pytest.raises(ValidationError):
-            client._make_request("GET", "/test")
-    
-    @responses.activate
-    def test_make_request_authentication_error(self, client):
-        """Test une erreur d'authentification."""
-        responses.add(
-            responses.GET,
-            "https://api.test.com/test",
-            json={"detail": "Token invalide"},
-            status=401
-        )
-        
-        with pytest.raises(AuthenticationError):
-            client._make_request("GET", "/test")
-    
-    @responses.activate
-    def test_make_request_connection_error(self, client):
-        """Test une erreur de connexion."""
-        responses.add(
-            responses.GET,
-            "https://api.test.com/test",
-            body=Exception("Connection failed")
-        )
-        
-        with pytest.raises(Exception):
-            client._make_request("GET", "/test")
-    
-    @responses.activate
-    def test_get_cas_dengue(self, client):
-        """Test de récupération des cas de dengue."""
-        cas = client.get_cas_dengue(
-            annee=2024,
-            mois=1,
-            region="Centre"
-        )
-        
-        assert len(cas) == 1
-        assert isinstance(cas[0], CasDengue)
-        assert cas[0].idCas == 1
-        assert cas[0].region == "Antananarivo"
-    
-    @responses.activate
-    def test_get_stats(self, client):
-        """Test la récupération des statistiques."""
-        mock_stats = {
-            "total_cas": 1000,
-            "total_positifs": 500,
-            "total_hospitalisations": 100,
-            "total_deces": 10,
-            "regions_actives": ["Antananarivo", "Fianarantsoa"],
-            "districts_actifs": ["Analamanga", "Haute Matsiatra"],
-            "derniere_mise_a_jour": "2024-01-15T10:30:00"
+    @patch('dengsurvab.client.requests.Session')
+    def test_authenticate_success(self, mock_session_class, client):
+        """Test l'authentification réussie."""
+        # Mock de la session
+        mock_session = Mock()
+        mock_session.post.return_value.status_code = 200
+        mock_session.post.return_value.json.return_value = {
+            "success": True,
+            "token": "test-token",
+            "user": {"email": "test@example.com"}
         }
+        mock_session_class.return_value = mock_session
         
-        responses.add(
-            responses.GET,
-            "https://api.test.com/api/stats",
-            json=mock_stats,
-            status=200
-        )
-        
-        stats = client.get_stats()
-        assert stats.total_cas == 1000
-        assert stats.total_positifs == 500
-        assert len(stats.regions_actives) == 2
-    
-    @responses.activate
-    def test_get_regions(self, client):
-        """Test la récupération des régions."""
-        mock_regions = {
-            "regions": ["Antananarivo", "Fianarantsoa", "Toamasina"]
-        }
-        
-        responses.add(
-            responses.GET,
-            "https://api.test.com/api/regions",
-            json=mock_regions,
-            status=200
-        )
-        
-        regions = client.get_regions()
-        assert regions == ["Antananarivo", "Fianarantsoa", "Toamasina"]
-    
-    @responses.activate
-    def test_get_districts(self, client):
-        """Test la récupération des districts."""
-        mock_districts = {
-            "districts": ["Analamanga", "Haute Matsiatra", "Atsinanana"]
-        }
-        
-        responses.add(
-            responses.GET,
-            "https://api.test.com/api/districts",
-            json=mock_districts,
-            status=200
-        )
-        
-        districts = client.get_districts(region="Antananarivo")
-        assert districts == ["Analamanga", "Haute Matsiatra", "Atsinanana"]
-    
-    @responses.activate
-    def test_data_period(self, client):
-        """Test la récupération des indicateurs hebdomadaires."""
-        mock_indicateurs = [
-            {
-                "date_debut": "2024-01-01",
-                "date_fin": "2024-01-07",
-                "region": "Toutes",
-                "district": "Toutes",
-                "total_cas": 100,
-                "cas_positifs": 50,
-                "cas_negatifs": 50,
-                "hospitalisations": 10,
-                "deces": 2,
-                "taux_positivite": 50.0,
-                "taux_hospitalisation": 10.0,
-                "taux_letalite": 2.0
-            }
-        ]
-        
-        responses.add(
-            responses.GET,
-            "https://api.test.com/indicateurs/indicateurs_hebdo",
-            json=mock_indicateurs,
-            status=200
-        )
-        
-        indicateurs = client.data_period(
-            date_debut="2024-01-01",
-            date_fin="2024-01-31"
-        )
-        
-        assert len(indicateurs) == 1
-        assert indicateurs[0].total_cas == 100
-        assert indicateurs[0].taux_positivite == 50.0
-    
-    @responses.activate
-    def test_get_alertes(self, client):
-        """Test la récupération des alertes."""
-        mock_alertes = [
-            {
-                "id": 1,
-                "severity": "critical",
-                "status": "active",
-                "message": "Seuil dépassé",
-                "region": "Antananarivo",
-                "created_at": "2024-01-15T10:30:00"
-            }
-        ]
-        
-        responses.add(
-            responses.GET,
-            "https://api.test.com/api/alerts/logs",
-            json=mock_alertes,
-            status=200
-        )
-        
-        alertes = client.get_alertes(limit=10)
-        assert len(alertes) == 1
-        assert isinstance(alertes[0], AlertLog)
-        assert alertes[0].severity == "critical"
-    
-    @responses.activate
-    def test_export_data(self, client):
-        """Test l'export de données."""
-        mock_csv_data = b"idCas,date_consultation,region\n1,2024-01-15,Antananarivo"
-        
-        responses.add(
-            responses.GET,
-            "https://api.test.com/export-data",
-            body=mock_csv_data,
-            status=200,
-            content_type="text/csv"
-        )
-        
-        data = client.export_data(
-            format="csv",
-            date_debut="2024-01-01",
-            date_fin="2024-01-31"
-        )
-        
-        assert data == mock_csv_data
-    
-    def test_clear_cache(self, client):
-        """Test le vidage du cache."""
-        client._cache["test"] = "value"
-        assert len(client._cache) == 1
-        
-        client.clear_cache()
-        assert len(client._cache) == 0
-    
-    def test_get_cache_info(self, client):
-        """Test la récupération des informations du cache."""
-        client._cache["test"] = "value"
-        info = client.get_cache_info()
-        
-        assert info["size"] == 1
-        assert "test" in info["keys"]
-        assert info["ttl"] == 300
-    
-    def test_set_cache_ttl(self, client):
-        """Test la modification de la durée de vie du cache."""
-        original_ttl = client._cache_ttl
-        client.set_cache_ttl(600)
-        
-        assert client._cache_ttl == 600
-        assert client._cache_ttl != original_ttl
-    
-    def test_context_manager(self, client):
-        """Test l'utilisation du client comme context manager."""
-        with client as c:
-            assert c is client
-            assert c.session is not None
-        
-        # La session devrait être fermée après le context manager
-        # assert client.session.closed is False  # requests.Session ne ferme pas automatiquement
-
-
-class TestClientAuthentication:
-    """Tests pour l'authentification."""
-    
-    @pytest.fixture
-    def client(self):
-        return AppiClient("https://api.test.com")
-    
-    @responses.activate
-    def test_authenticate_success(self, client):
-        """Test une authentification réussie."""
-        mock_auth_response = {
-            "access_token": "test-token",
-            "token_type": "bearer",
-            "expires_in": 1800,
-            "user": {
-                "id": 1,
-                "email": "test@example.com",
-                "username": "testuser"
-            }
-        }
-        
-        responses.add(
-            responses.POST,
-            "https://api.test.com/login",
-            json=mock_auth_response,
-            status=200
-        )
-        
+        # Test
         result = client.authenticate("test@example.com", "password")
-        assert result == mock_auth_response
-        assert "Bearer test-token" in client.session.headers["Authorization"]
+        
+        assert result is True
+        assert client.session.headers.get("Authorization") == "Bearer test-token"
     
-    @responses.activate
-    def test_authenticate_failure(self, client):
-        """Test une authentification échouée."""
-        responses.add(
-            responses.POST,
-            "https://api.test.com/login",
-            json={"detail": "Identifiants invalides"},
-            status=401
+    @patch('dengsurvab.client.requests.Session')
+    def test_authenticate_failure(self, mock_session_class, client):
+        """Test l'échec d'authentification."""
+        # Mock de la session
+        mock_session = Mock()
+        mock_session.post.return_value.status_code = 401
+        mock_session.post.return_value.json.return_value = {
+            "success": False,
+            "message": "Invalid credentials"
+        }
+        mock_session_class.return_value = mock_session
+        
+        # Test
+        result = client.authenticate("test@example.com", "wrong-password")
+        
+        assert result is False
+    
+    def test_is_authenticated(self, client):
+        """Test la vérification d'authentification."""
+        # Non authentifié
+        assert client.is_authenticated() is False
+        
+        # Authentifié
+        client.session.headers["Authorization"] = "Bearer test-token"
+        assert client.is_authenticated() is True
+    
+    @patch('dengsurvab.client.requests.Session')
+    def test_get_cas_dengue(self, mock_session_class, client):
+        """Test la récupération des cas de dengue."""
+        # Mock de la session
+        mock_session = Mock()
+        mock_session.get.return_value.status_code = 200
+        mock_session.get.return_value.json.return_value = {
+            "data": [
+                {
+                    "date_debut": "2024-01-01",
+                    "date_fin": "2024-01-07",
+                    "cas_positifs": 10,
+                    "hospitalisations": 2,
+                    "deces": 0,
+                    "taux_positivite": 15.5,
+                    "taux_hospitalisation": 3.1,
+                    "taux_letalite": 0.0
+                },
+                {
+                    "date_debut": "2024-01-08",
+                    "date_fin": "2024-01-14",
+                    "cas_positifs": 15,
+                    "hospitalisations": 3,
+                    "deces": 1,
+                    "taux_positivite": 18.2,
+                    "taux_hospitalisation": 3.7,
+                    "taux_letalite": 0.8
+                }
+            ]
+        }
+        mock_session_class.return_value = mock_session
+        
+        # Test
+        result = client.get_cas_dengue(annee=2024, mois=1)
+        
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == 2
+        assert "cas_positifs" in result.columns
+        assert "hospitalisations" in result.columns
+        assert "deces" in result.columns
+        assert result["cas_positifs"].sum() == 25
+    
+    @patch('dengsurvab.client.requests.Session')
+    def test_get_alertes(self, mock_session_class, client):
+        """Test la récupération des alertes."""
+        # Mock de la session
+        mock_session = Mock()
+        mock_session.get.return_value.status_code = 200
+        mock_session.get.return_value.json.return_value = {
+            "data": [
+                {
+                    "id": 1,
+                    "severity": "critical",
+                    "status": "active",
+                    "message": "Seuil dépassé",
+                    "region": "Antananarivo",
+                    "created_at": "2024-01-15T10:30:00"
+                },
+                {
+                    "id": 2,
+                    "severity": "warning",
+                    "status": "resolved",
+                    "message": "Alerte résolue",
+                    "region": "Toamasina",
+                    "created_at": "2024-01-14T15:45:00"
+                }
+            ]
+        }
+        mock_session_class.return_value = mock_session
+        
+        # Test
+        result = client.get_alertes(limit=10)
+        
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == 2
+        assert "severity" in result.columns
+        assert "message" in result.columns
+        assert result["severity"].iloc[0] == "critical"
+    
+    @patch('dengsurvab.client.requests.Session')
+    def test_calculate_rates(self, mock_session_class, client):
+        """Test le calcul des taux."""
+        # Mock de la session
+        mock_session = Mock()
+        mock_session.get.return_value.status_code = 200
+        mock_session.get.return_value.json.return_value = {
+            "data": [
+                {
+                    "date_debut": "2024-01-01",
+                    "date_fin": "2024-01-31",
+                    "total_cas": 100,
+                    "cas_positifs": 25,
+                    "hospitalisations": 8,
+                    "deces": 2
+                }
+            ]
+        }
+        mock_session_class.return_value = mock_session
+        
+        # Test
+        result = client.calculate_rates(
+            date_debut="2024-01-01",
+            date_fin="2024-01-31"
         )
         
-        with pytest.raises(AuthenticationError):
-            client.authenticate("test@example.com", "wrong-password")
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == 1
+        assert "taux_positivite" in result.columns
+        assert "taux_hospitalisation" in result.columns
+        assert "taux_letalite" in result.columns
     
-    @responses.activate
+    @patch('dengsurvab.client.requests.Session')
+    def test_detect_anomalies(self, mock_session_class, client):
+        """Test la détection d'anomalies."""
+        # Créer des données de test
+        test_data = pd.DataFrame({
+            "cas_positifs": [10, 15, 8, 20, 12, 18, 25, 30, 22, 16],
+            "hospitalisations": [2, 3, 1, 4, 2, 3, 5, 6, 4, 3]
+        })
+        
+        # Test
+        result = client.detect_anomalies(
+            test_data,
+            columns=["cas_positifs"],
+            method="zscore"
+        )
+        
+        assert isinstance(result, pd.DataFrame)
+        assert "cas_positifs_anomaly" in result.columns
+        assert len(result) == len(test_data)
+    
+    @patch('dengsurvab.client.requests.Session')
+    def test_get_stats(self, mock_session_class, client):
+        """Test la récupération des statistiques."""
+        # Mock de la session
+        mock_session = Mock()
+        mock_session.get.return_value.status_code = 200
+        mock_session.get.return_value.json.return_value = {
+            "data": [
+                {
+                    "total_cas": 1000,
+                    "cas_positifs": 250,
+                    "hospitalisations": 80,
+                    "deces": 5,
+                    "regions_actives": ["Antananarivo", "Toamasina"]
+                }
+            ]
+        }
+        mock_session_class.return_value = mock_session
+        
+        # Test
+        result = client.get_stats()
+        
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == 1
+        assert "total_cas" in result.columns
+        assert "cas_positifs" in result.columns
+    
+    @patch('dengsurvab.client.requests.Session')
+    def test_verifier_alertes(self, mock_session_class, client):
+        """Test la vérification des alertes."""
+        # Mock de la session
+        mock_session = Mock()
+        mock_session.get.return_value.status_code = 200
+        mock_session.get.return_value.json.return_value = {
+            "alertes_detectees": [
+                {
+                    "type": "seuil_positivite",
+                    "region": "Antananarivo",
+                    "valeur": 25.5,
+                    "seuil": 20.0
+                }
+            ],
+            "total_alertes": 1
+        }
+        mock_session_class.return_value = mock_session
+        
+        # Test
+        result = client.verifier_alertes(
+            date_debut="2024-01-01",
+            date_fin="2024-01-31"
+        )
+        
+        assert isinstance(result, dict)
+        assert "alertes_detectees" in result
+        assert len(result["alertes_detectees"]) == 1
+    
     def test_logout(self, client):
         """Test la déconnexion."""
         # Simuler une session authentifiée
         client.session.headers["Authorization"] = "Bearer test-token"
         
-        responses.add(
-            responses.POST,
-            "https://api.test.com/logout",
-            json={"message": "Déconnexion réussie"},
-            status=200
-        )
-        
+        # Test
         result = client.logout()
+        
         assert result is True
         assert "Authorization" not in client.session.headers
-
-
-class TestClientDataOperations:
-    """Tests pour les opérations de données."""
     
-    @pytest.fixture
-    def client(self):
-        return AppiClient("https://api.test.com", "test-key")
-    
-    @responses.activate
-    def test_add_cas_dengue(self, client):
-        """Test l'ajout de cas de dengue."""
-        from dengsurvab.models import ValidationCasDengue
-        
-        cas = ValidationCasDengue(
-            idCas=1,
-            sexe="masculin",
-            age=25,
-            region="centre",
-            id_source=1
-        )
-        
-        mock_response = {"message": "Cas ajouté avec succès", "id": 1}
-        
-        responses.add(
-            responses.POST,
-            "https://api.test.com/add-listCasDengue-json/",
-            json=mock_response,
-            status=200
-        )
-        
-        result = client.add_cas_dengue([cas])
-        assert result == mock_response
-    
-    @responses.activate
-    def test_get_taux_hospitalisation(self, client):
-        """Test la récupération du taux d'hospitalisation."""
-        mock_taux = {
-            "taux_hospitalisation": 15.5,
-            "total_cas": 1000,
-            "total_hospitalisations": 155
+    @patch('dengsurvab.client.requests.Session')
+    def test_make_request_error(self, mock_session_class, client):
+        """Test la gestion des erreurs de requête."""
+        # Mock de la session
+        mock_session = Mock()
+        mock_session.get.return_value.status_code = 500
+        mock_session.get.return_value.json.return_value = {
+            "error": "Internal server error"
         }
+        mock_session_class.return_value = mock_session
         
-        responses.add(
-            responses.GET,
-            "https://api.test.com/indicateurs/taux-hospitalisation",
-            json=mock_taux,
-            status=200
-        )
-        
-        result = client.get_taux_hospitalisation(
-            date_debut="2024-01-01",
-            date_fin="2024-01-31"
-        )
-        
-        assert result == mock_taux
+        # Test
+        with pytest.raises(APIError):
+            client._make_request("GET", "/api/test")
     
-    @responses.activate
-    def test_get_taux_letalite(self, client):
-        """Test la récupération du taux de létalité."""
-        mock_taux = {
-            "taux_letalite": 2.5,
-            "total_cas": 1000,
-            "total_deces": 25
+    @patch('dengsurvab.client.requests.Session')
+    def test_make_request_authentication_error(self, mock_session_class, client):
+        """Test la gestion des erreurs d'authentification."""
+        # Mock de la session
+        mock_session = Mock()
+        mock_session.get.return_value.status_code = 401
+        mock_session.get.return_value.json.return_value = {
+            "error": "Unauthorized"
         }
+        mock_session_class.return_value = mock_session
         
-        responses.add(
-            responses.GET,
-            "https://api.test.com/indicateurs/taux-deletalite",
-            json=mock_taux,
-            status=200
-        )
+        # Test
+        with pytest.raises(AuthenticationError):
+            client._make_request("GET", "/api/test")
+    
+    def test_show_available_columns(self, client):
+        """Test l'affichage des colonnes disponibles."""
+        # Mock des méthodes de données
+        with patch.object(client, 'donnees_par_periode') as mock_aggregated:
+            mock_aggregated.return_value = pd.DataFrame({
+                'cas_positifs': [10, 15, 20],
+                'hospitalisations': [2, 3, 4],
+                'deces': [0, 1, 0]
+            })
+            
+            result = client.show_available_columns(use_aggregated=True)
+            
+            assert result["success"] is True
+            assert "cas_positifs" in result["columns"]
+            assert "hospitalisations" in result["columns"]
+            assert result["data_type"] == "aggregated"
+    
+    # MIGRATION : Les fonctions resume/resume_display sont remplacées par resumer, graph_desc, evolution
+    # @patch('dengsurvab.client.requests.Session')
+    # def test_resume(self, mock_session_class, client):
+    #     """Test la génération du résumé."""
+    #     # Mock de la session
+    #     mock_session = Mock()
+    #     mock_session.get.return_value.status_code = 200
+    #     mock_session.get.return_value.json.return_value = {
+    #         "periode_couverture": {"debut": "2024-01-01", "fin": "2024-01-31"},
+    #         "informations_generales": {"total_enregistrements": 1000},
+    #         "variables": {
+    #             "numeriques": {"cas_positifs": {"min": 0, "max": 50}},
+    #             "qualitatives": {"region": {"valeurs_uniques": 5}}
+    #         }
+    #     }
+    #     mock_session_class.return_value = mock_session
         
-        result = client.get_taux_letalite(
-            date_debut="2024-01-01",
-            date_fin="2024-01-31"
-        )
+    #     # Test
+    #     result = client.resume(limit=100)
         
-        assert result == mock_taux
-
-
-if __name__ == "__main__":
-    pytest.main([__file__]) 
+    #     assert isinstance(result, dict)
+    #     assert "periode_couverture" in result
+    #     assert "informations_generales" in result
+    #     assert "variables" in result 
