@@ -201,12 +201,13 @@ def handle_cas(client, args):
         
         print(f"\n📋 Cas récupérés: {len(cas)}")
         
-        for i, c in enumerate(cas[:5], 1):  # Afficher les 5 premiers
-            print(f"   {i}. {c.date_consultation} - {c.region} - {c.sexe} ({c.age} ans)")
-            if c.resultat_test:
-                print(f"      Test: {c.resultat_test}")
-            if c.hospitalise:
-                print(f"      Hospitalisé: {c.hospitalise}")
+        for i, c in enumerate(cas.head(5).iterrows(), 1):  # Afficher les 5 premiers
+            _, row = c
+            print(f"   {i}. {row.get('date_consultation', 'N/A')} - {row.get('region', 'N/A')} - {row.get('sexe', 'N/A')} ({row.get('age', 'N/A')} ans)")
+            if row.get('resultat_test'):
+                print(f"      Test: {row.get('resultat_test')}")
+            if row.get('hospitalise'):
+                print(f"      Hospitalisé: {row.get('hospitalise')}")
         
         if len(cas) > 5:
             print(f"   ... et {len(cas) - 5} autres cas")
@@ -228,11 +229,12 @@ def handle_alertes(client, args):
         
         print(f"\n📢 Alertes récupérées: {len(alertes)}")
         
-        for i, a in enumerate(alertes, 1):
-            print(f"   {i}. [{a.severity}] {a.message}")
-            print(f"      Région: {a.region or 'N/A'}")
-            print(f"      Statut: {a.status or 'N/A'}")
-            print(f"      Date: {a.created_at or 'N/A'}")
+        for i, a in enumerate(alertes.iterrows(), 1):
+            _, row = a
+            print(f"   {i}. [{row.get('severity', 'N/A')}] {row.get('message', 'N/A')}")
+            print(f"      Région: {row.get('region', 'N/A')}")
+            print(f"      Statut: {row.get('status', 'N/A')}")
+            print(f"      Date: {row.get('created_at', 'N/A')}")
             print()
             
     except Exception as e:

@@ -818,10 +818,17 @@ class SyntheseBase:
         import seaborn as sns
         import os
 
+        # Configuration du style professionnel
+        plt.style.use('seaborn-v0_8-whitegrid')
+        sns.set_palette("husl")
+        
+        # Configuration des couleurs professionnelles
+        colors = ['#2E86AB', '#A23B72', '#F18F01', '#C73E1D', '#6B5B95', '#88B04B']
+        
         df = self._get_data(df, date_debut, date_fin, region, district, limit, annee)
         if annee:
             df = df[df['annee'] == annee]
-        sns.set_theme(style="whitegrid")
+        
         cibles = ['issue', 'hospitalisation', 'resultat_test']
         date_col = self._detect_colonne_date(df)
         if not date_col:
@@ -831,6 +838,7 @@ class SyntheseBase:
         if date_col not in df.columns:
             print(f"[Erreur] Colonne de date '{date_col}' non trouvée dans le DataFrame.")
             return
+            
         df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
         if frequence == "W":
             df['periode'] = df[date_col].dt.to_period('W').apply(lambda r: r.start_time)
@@ -841,89 +849,127 @@ class SyntheseBase:
         else:
             print("[Erreur] frequence doit être 'W' (hebdomadaire) ou 'M' (mensuelle)")
             return
+            
         if by is not None and not isinstance(by, list):
             by = [by]
+            
         graph_count = 0
+        
         for cible in cibles:
             if cible not in df.columns:
                 print(f"[Info] Variable cible '{cible}' absente de la base.")
                 continue
+                
             group_cols = ['periode'] + (by if by else [])
             ct = df.groupby(group_cols)[cible].value_counts().unstack(fill_value=0).sort_index()
             croissance = ct.diff().fillna(0)
             croissance_pct = ct.pct_change().replace([np.inf, -np.inf], np.nan).fillna(0) * 100
-            for modalite in ct.columns:
+            
+            for i, modalite in enumerate(ct.columns):
                 if max_graph is not None and graph_count >= max_graph:
                     return
-                plt.figure(figsize=(12, 6))
+                    
+                # Graphique d'évolution - Style professionnel
+                fig, ax = plt.subplots(figsize=(14, 8))
+                
                 if by:
-                    for key, subdf in ct[modalite].groupby(level=by):
+                    for j, (key, subdf) in enumerate(ct[modalite].groupby(level=by)):
                         label = str(key) if isinstance(key, tuple) else key
-                        plt.plot(subdf.index.get_level_values('periode'), subdf.values, marker='o', label=label)
+                        color = colors[j % len(colors)]
+                        ax.plot(subdf.index.get_level_values('periode'), subdf.values, 
+                               marker='o', linewidth=3, markersize=8, label=label, color=color)
                 else:
-                    plt.plot(ct.index, ct[modalite], marker='o', label=modalite)
-                plt.title(f"Évolution {freq_label} de '{cible}' ({modalite})" + (f" par {', '.join(by)}" if by else ""))
-                plt.xlabel(freq_label)
-                plt.ylabel("Nombre d'observations")
-                plt.xticks(rotation=45)
-                plt.legend(title=by[0] if by else cible)
+                    ax.plot(ct.index, ct[modalite], marker='o', linewidth=3, markersize=8, 
+                           label=modalite, color=colors[0])
+                
+                # Amélioration du style
+                ax.set_title(f"Évolution {freq_label} - {cible.title()} ({modalite})" + 
+                           (f" par {', '.join(by)}" if by else ""), 
+                           fontsize=16, fontweight='bold', pad=20)
+                ax.set_xlabel(f"Période ({freq_label.lower()})", fontsize=12, fontweight='bold')
+                ax.set_ylabel("Nombre d'observations", fontsize=12, fontweight='bold')
+                ax.tick_params(axis='both', which='major', labelsize=10)
+                ax.grid(True, alpha=0.3, linestyle='--')
+                ax.legend(title=by[0] if by else cible.title(), fontsize=10, framealpha=0.9)
+                
+                # Rotation des labels x pour une meilleure lisibilité
+                plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
+                
+                # Ajout d'une grille secondaire
+                ax.grid(True, alpha=0.2, which='minor')
+                ax.minorticks_on()
+                
                 plt.tight_layout()
+                
                 if save_dir:
                     os.makedirs(save_dir, exist_ok=True)
                     fname = f"evol_{cible}_{modalite}_{freq_label}" + (f"_par_{'_'.join(by)}" if by else "") + ".png"
-                    plt.savefig(os.path.join(save_dir, fname), bbox_inches='tight')
+                    plt.savefig(os.path.join(save_dir, fname), bbox_inches='tight', dpi=300)
                     plt.close()
                 else:
                     plt.show()
+                    
                 graph_count += 1
                 if max_graph is not None and graph_count >= max_graph:
                     return
+                    
                 if taux_croissance:
+                    # Graphique de croissance absolue - Style professionnel
+                    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10))
+                    
                     # Croissance absolue
-                    plt.figure(figsize=(12, 4))
                     if by:
-                        for key, subdf in croissance[modalite].groupby(level=by):
+                        for j, (key, subdf) in enumerate(croissance[modalite].groupby(level=by)):
                             label = str(key) if isinstance(key, tuple) else key
-                            plt.bar(subdf.index.get_level_values('periode'), subdf.values, label=label, alpha=0.7)
+                            color = colors[j % len(colors)]
+                            bars = ax1.bar(subdf.index.get_level_values('periode'), subdf.values, 
+                                          label=label, alpha=0.8, color=color, edgecolor='black', linewidth=0.5)
                     else:
-                        plt.bar(croissance.index, croissance[modalite], color='orange')
-                    plt.title(f"Croissance {freq_label} de '{cible}' ({modalite})" + (f" par {', '.join(by)}" if by else ""))
-                    plt.xlabel(freq_label)
-                    plt.ylabel("Croissance absolue")
-                    plt.xticks(rotation=45)
+                        bars = ax1.bar(croissance.index, croissance[modalite], 
+                                      color=colors[0], alpha=0.8, edgecolor='black', linewidth=0.5)
+                    
+                    ax1.set_title(f"Taux de Croissance Absolu - {cible.title()} ({modalite})" + 
+                                (f" par {', '.join(by)}" if by else ""), 
+                                fontsize=14, fontweight='bold', pad=20)
+                    ax1.set_ylabel("Croissance absolue", fontsize=12, fontweight='bold')
+                    ax1.grid(True, alpha=0.3, linestyle='--')
+                    ax1.legend(title=by[0] if by else cible.title(), fontsize=10, framealpha=0.9)
+                    ax1.tick_params(axis='both', which='major', labelsize=10)
+                    plt.setp(ax1.get_xticklabels(), rotation=45, ha='right')
+                    
+                    # Croissance en pourcentage
                     if by:
-                        plt.legend(title=by[0])
+                        for j, (key, subdf) in enumerate(croissance_pct[modalite].groupby(level=by)):
+                            label = str(key) if isinstance(key, tuple) else key
+                            color = colors[j % len(colors)]
+                            bars = ax2.bar(subdf.index.get_level_values('periode'), subdf.values, 
+                                          label=label, alpha=0.8, color=color, edgecolor='black', linewidth=0.5)
+                    else:
+                        bars = ax2.bar(croissance_pct.index, croissance_pct[modalite], 
+                                      color=colors[1], alpha=0.8, edgecolor='black', linewidth=0.5)
+                    
+                    ax2.set_title(f"Taux de Croissance en Pourcentage - {cible.title()} ({modalite})" + 
+                                (f" par {', '.join(by)}" if by else ""), 
+                                fontsize=14, fontweight='bold', pad=20)
+                    ax2.set_xlabel(f"Période ({freq_label.lower()})", fontsize=12, fontweight='bold')
+                    ax2.set_ylabel("Croissance (%)", fontsize=12, fontweight='bold')
+                    ax2.grid(True, alpha=0.3, linestyle='--')
+                    ax2.legend(title=by[0] if by else cible.title(), fontsize=10, framealpha=0.9)
+                    ax2.tick_params(axis='both', which='major', labelsize=10)
+                    plt.setp(ax2.get_xticklabels(), rotation=45, ha='right')
+                    
+                    # Ajout d'une ligne de référence à zéro pour le pourcentage
+                    ax2.axhline(y=0, color='red', linestyle='--', alpha=0.7, linewidth=2)
+                    
                     plt.tight_layout()
+                    
                     if save_dir:
                         fname = f"croissance_{cible}_{modalite}_{freq_label}" + (f"_par_{'_'.join(by)}" if by else "") + ".png"
-                        plt.savefig(os.path.join(save_dir, fname), bbox_inches='tight')
+                        plt.savefig(os.path.join(save_dir, fname), bbox_inches='tight', dpi=300)
                         plt.close()
                     else:
                         plt.show()
-                    graph_count += 1
-                    if max_graph is not None and graph_count >= max_graph:
-                        return
-                    # Croissance en pourcentage
-                    plt.figure(figsize=(12, 4))
-                    if by:
-                        for key, subdf in croissance_pct[modalite].groupby(level=by):
-                            label = str(key) if isinstance(key, tuple) else key
-                            plt.bar(subdf.index.get_level_values('periode'), subdf.values, label=label, alpha=0.7)
-                    else:
-                        plt.bar(croissance_pct.index, croissance_pct[modalite], color='green')
-                    plt.title(f"Croissance % {freq_label} de '{cible}' ({modalite})" + (f" par {', '.join(by)}" if by else ""))
-                    plt.xlabel(freq_label)
-                    plt.ylabel("Croissance (%)")
-                    plt.xticks(rotation=45)
-                    if by:
-                        plt.legend(title=by[0])
-                    plt.tight_layout()
-                    if save_dir:
-                        fname = f"croissance_pct_{cible}_{modalite}_{freq_label}" + (f"_par_{'_'.join(by)}" if by else "") + ".png"
-                        plt.savefig(os.path.join(save_dir, fname), bbox_inches='tight')
-                        plt.close()
-                    else:
-                        plt.show()
+                        
                     graph_count += 1
                     if max_graph is not None and graph_count >= max_graph:
                         return

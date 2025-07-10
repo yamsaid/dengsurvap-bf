@@ -104,6 +104,7 @@ elif [ "$MODE" = "prod" ]; then
     print_success "✅ Installation depuis PyPI réussie !"
 fi
 
+
 # 8. Afficher les informations finales
 print_success "🎉 Publication terminée avec succès !"
 echo ""

@@ -448,7 +448,7 @@ dab resumer --annee 2024 --region "Centre" --detail
 ```
 - Visualisation descriptive :
 ```bash
-dab graph-desc --date-debut 2024-01-01 --date-fin 2024-12-31 --save-dir ./figures
+dab graph_desc --date-debut 2024-01-01 --date-fin 2024-12-31 --save-dir ./figures
 ```
 - Analyse temporelle :
 ```bash

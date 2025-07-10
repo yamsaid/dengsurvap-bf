@@ -173,7 +173,7 @@ client.save_to_file(
 
 #print(client.resume_display(graph=True,max_graphs=4, use_aggregated=False))
 synth = SyntheseBase(client=client)
-df = client.data(date_debut="2024-01-01", date_fin="2025-07-01", region="Centre",limit=20)
+df = client.data(date_debut="2025-01-01", date_fin="2025-07-07")
 #synth = SyntheseBase(df)
 
 #print(synth.resumer(df=df))
@@ -181,7 +181,7 @@ df = client.data(date_debut="2024-01-01", date_fin="2025-07-01", region="Centre"
 #print(synth.graph_desc(date_debut="2024-01-01", date_fin="2025-07-01", region="Centre",detail=True,limit=20))
 #ynth.graph_desc(date_debut="2024-01-01", date_fin="2025-07-01", region="Centre",limit=20, save_dir="./figures")
 #synth.evolution(by='sexe',date_debut="2024-01-01", date_fin="2025-07-01", region="Centre",limit=20,max_graph=2)
-#synth.evolution(df)
+synth.evolution(df)
 
 #print(synth._prepare_df(df))
 
