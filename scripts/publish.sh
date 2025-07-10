@@ -95,6 +95,7 @@ elif [ "$MODE" = "prod" ]; then
         exit 1
     fi
     
+
     print_status "🚀 Publication sur PyPI production..."
     twine upload dist/*
     print_success "✅ Publication sur PyPI production réussie !"

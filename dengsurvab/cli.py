@@ -85,6 +85,39 @@ Exemples d'utilisation:
     districts_parser = subparsers.add_parser("districts", help="Lister les districts")
     districts_parser.add_argument("--region", help="Région")
     
+    # Commande resumer (nouvelle)
+    resumer_parser = subparsers.add_parser("resumer", help="Résumé statistique et structurel")
+    resumer_parser.add_argument("--annee", type=int, help="Année")
+    resumer_parser.add_argument("--region", help="Région")
+    resumer_parser.add_argument("--district", help="District")
+    resumer_parser.add_argument("--date-debut", help="Date de début (YYYY-MM-DD)")
+    resumer_parser.add_argument("--date-fin", help="Date de fin (YYYY-MM-DD)")
+    resumer_parser.add_argument("--detail", action="store_true", help="Afficher les détails")
+    resumer_parser.add_argument("--max-lignes", type=int, default=10, help="Nombre maximum de lignes")
+    
+    # Commande graph_desc (nouvelle)
+    graph_desc_parser = subparsers.add_parser("graph_desc", help="Visualisation descriptive")
+    graph_desc_parser.add_argument("--annee", type=int, help="Année")
+    graph_desc_parser.add_argument("--region", help="Région")
+    graph_desc_parser.add_argument("--district", help="District")
+    graph_desc_parser.add_argument("--date-debut", help="Date de début (YYYY-MM-DD)")
+    graph_desc_parser.add_argument("--date-fin", help="Date de fin (YYYY-MM-DD)")
+    graph_desc_parser.add_argument("--save-dir", help="Dossier de sauvegarde des graphiques")
+    graph_desc_parser.add_argument("--max-modalites", type=int, default=10, help="Nombre maximum de modalités")
+    graph_desc_parser.add_argument("--boxplot-age", action="store_true", help="Afficher boxplot pour l'âge")
+    
+    # Commande evolution (nouvelle)
+    evolution_parser = subparsers.add_parser("evolution", help="Analyse temporelle")
+    evolution_parser.add_argument("--by", help="Variable de sous-groupe (sexe, region, district, etc.)")
+    evolution_parser.add_argument("--frequence", choices=["W", "M"], default="W", help="Fréquence (W=semaine, M=mois)")
+    evolution_parser.add_argument("--taux-croissance", action="store_true", help="Calculer les taux de croissance")
+    evolution_parser.add_argument("--max-graph", type=int, default=6, help="Nombre maximum de graphiques")
+    evolution_parser.add_argument("--annee", type=int, help="Année")
+    evolution_parser.add_argument("--region", help="Région")
+    evolution_parser.add_argument("--district", help="District")
+    evolution_parser.add_argument("--date-debut", help="Date de début (YYYY-MM-DD)")
+    evolution_parser.add_argument("--date-fin", help="Date de fin (YYYY-MM-DD)")
+    
     args = parser.parse_args()
     
     if not args.command:
@@ -118,6 +151,12 @@ Exemples d'utilisation:
             handle_regions(client)
         elif args.command == "districts":
             handle_districts(client, args)
+        elif args.command == "resumer":
+            handle_resumer(client, args)
+        elif args.command == "graph_desc":
+            handle_graph_desc(client, args)
+        elif args.command == "evolution":
+            handle_evolution(client, args)
         else:
             print(f"❌ Commande inconnue: {args.command}")
             sys.exit(1)
@@ -259,18 +298,119 @@ def handle_regions(client):
 
 def handle_districts(client, args):
     """Gérer la commande districts."""
-    print("📍 Récupération des districts...")
+    print("🗺️ Récupération des districts...")
     
     try:
         districts = client.get_districts(region=args.region)
-        region_info = f" de {args.region}" if args.region else ""
-        print(f"\n📋 Districts{region_info} ({len(districts)}):")
         
-        for i, district in enumerate(districts, 1):
-            print(f"   {i}. {district}")
+        print(f"\n📍 Districts récupérés: {len(districts)}")
+        
+        for district in districts:
+            print(f"   • {district}")
             
     except Exception as e:
         print(f"❌ Erreur lors de la récupération des districts: {e}")
+
+
+def handle_resumer(client, args):
+    """Gérer la commande resumer."""
+    print("📊 Génération du résumé statistique et structurel...")
+    
+    try:
+        # Préparer les paramètres
+        params = {}
+        if args.annee:
+            params['annee'] = args.annee
+        if args.region:
+            params['region'] = args.region
+        if args.district:
+            params['district'] = args.district
+        if args.date_debut:
+            params['date_debut'] = args.date_debut
+        if args.date_fin:
+            params['date_fin'] = args.date_fin
+        if args.detail:
+            params['detail'] = args.detail
+        if args.max_lignes:
+            params['max_lignes'] = args.max_lignes
+        
+        # Appeler la méthode resumer
+        client.resumer(**params)
+        
+        print("✅ Résumé généré avec succès")
+        
+    except Exception as e:
+        print(f"❌ Erreur lors de la génération du résumé: {e}")
+
+
+def handle_graph_desc(client, args):
+    """Gérer la commande graph_desc."""
+    print("📈 Génération des graphiques descriptifs...")
+    
+    try:
+        # Préparer les paramètres
+        params = {}
+        if args.annee:
+            params['annee'] = args.annee
+        if args.region:
+            params['region'] = args.region
+        if args.district:
+            params['district'] = args.district
+        if args.date_debut:
+            params['date_debut'] = args.date_debut
+        if args.date_fin:
+            params['date_fin'] = args.date_fin
+        if args.save_dir:
+            params['save_dir'] = args.save_dir
+        if args.max_modalites:
+            params['max_modalites'] = args.max_modalites
+        if args.boxplot_age:
+            params['boxplot_age'] = args.boxplot_age
+        
+        # Appeler la méthode graph_desc
+        client.graph_desc(**params)
+        
+        print("✅ Graphiques descriptifs générés avec succès")
+        if args.save_dir:
+            print(f"📁 Graphiques sauvegardés dans: {args.save_dir}")
+        
+    except Exception as e:
+        print(f"❌ Erreur lors de la génération des graphiques: {e}")
+
+
+def handle_evolution(client, args):
+    """Gérer la commande evolution."""
+    print("📈 Génération de l'analyse temporelle...")
+    
+    try:
+        # Préparer les paramètres
+        params = {}
+        if args.by:
+            params['by'] = args.by
+        if args.frequence:
+            params['frequence'] = args.frequence
+        if args.taux_croissance:
+            params['taux_croissance'] = args.taux_croissance
+        if args.max_graph:
+            params['max_graph'] = args.max_graph
+        if args.annee:
+            params['annee'] = args.annee
+        if args.region:
+            params['region'] = args.region
+        if args.district:
+            params['district'] = args.district
+        if args.date_debut:
+            params['date_debut'] = args.date_debut
+        if args.date_fin:
+            params['date_fin'] = args.date_fin
+        
+        # Appeler la méthode evolution
+        client.evolution(**params)
+        
+        print("✅ Analyse temporelle générée avec succès")
+        
+    except Exception as e:
+        print(f"❌ Erreur lors de la génération de l'analyse temporelle: {e}")
 
 
 if __name__ == "__main__":
