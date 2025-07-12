@@ -110,6 +110,6 @@ Voir [CHANGELOG.md](CHANGELOG.md) pour la liste complète des évolutions et ins
 
 ## 🔗 Ressources complémentaires
 
-- [Documentation API Appi Dengue](https://api-bf-dengue-survey-production.up.railway.app/docs)
+- [Documentation API Appi Dengue](https://api-bf-dengue-survey-production.up.railway.app/api/documentation-dengsurvap-bf)
 - [CHANGELOG.md](CHANGELOG.md)
 - [Exemples de scripts](./examples/)

@@ -32,7 +32,7 @@ from .alerts import AlertManager
 from .auth import AuthManager
 from .export import DataExporter
 
-__version__ = "0.1.0"
+__version__ = "0.2.3"
 __author__ = "Saïdou YAMEOGO - Data Analyst @ Appi"
 __email__ = "saidouyameogo3@gmail.com"
 

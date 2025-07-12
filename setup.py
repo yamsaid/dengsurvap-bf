@@ -40,7 +40,7 @@ def read_requirements():
 
 setup(
     name="dengsurvap-bf",
-    version="0.1.0",
+    version="0.2.3",
     author="Saïdou YAMEOGO - Data Analyst",
     author_email="saidouyameogo3@gmail.com",
     description="Client Python pour l'API de surveillance de la dengue ",

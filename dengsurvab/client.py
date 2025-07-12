@@ -33,10 +33,132 @@ os.environ['APPI_API_URL'] = "https://api-bf-dengue-survey-production.up.railway
 
 class AppiClient:
     """
+    ---
     Client principal pour l'API de surveillance de la dengue Appi.
-    
+    ---
+    Documentation en ligne: https://api-bf-dengue-survey-production.up.railway.app/api/documentation-dengsurvap-bf
+    ---
     Cette classe fournit une interface complète pour accéder aux données
     épidémiologiques, gérer les alertes et effectuer des analyses.
+    ---
+    Exemple d'utilisation:
+    >>> from dengsurvab import AppiClient
+    >>> client = AppiClient("https://api.example.com", "your-api-key")
+    >>> cas = client.get_cas_dengue(annee=2024, mois=1, region="Centre")
+
+    ---
+    Attributs:
+    - api_key: Clé API optionnelle
+    - timeout: Timeout des requêtes en secondes
+    - retry_attempts: Nombre de tentatives en cas d'échec
+    - retry_delay: Délai entre les tentatives en secondes
+    - debug: Mode debug pour les logs détaillés
+    - base_url: URL de base de l'API
+    - session: Session HTTP avec configuration
+    - _cache: Cache pour les requêtes fréquentes
+    - _cache_ttl: Durée de vie du cache en secondes
+    - logger: Logger pour les messages de débogage
+
+    ---
+    Méthodes:
+
+    - authenticate(email: str, password: str) -> Dict[str, Any]:
+        Authentifie l'utilisateur et récupère un token JWT.
+
+    - logout() -> bool:
+        Déconnecte l'utilisateur.
+
+    - get_profile() -> User:
+        Récupère le profil de l'utilisateur connecté.
+
+    - update_profile(**kwargs) -> User:
+        Met à jour le profil utilisateur.
+
+    - data(date_debut: Optional[str] = None, date_fin: Optional[str] = None, region: Optional[str] = None, district: Optional[str] = None, limit: Optional[int] = None, page: Optional[int] = None, full: bool = False) -> pd.DataFrame:    
+        Récupère les données de dengue sous forme de DataFrame.
+
+    - get_cas_dengue(annee: int = date.today().year, mois: int = date.today().month, region: Optional[str] = None, district: Optional[str] = None) -> pd.DataFrame:
+        Récupère les données hebdomadaires de dengue.
+
+    - add_cas_dengue(cas_list: List[ValidationCasDengue]) -> Dict[str, Any]:
+        Ajoute des cas de dengue à la base de données.
+
+    - get_stats() -> Statistiques:
+        Récupère les statistiques de la base de données.
+
+    - get_regions() -> List[str]:
+        Récupère la liste des régions.
+
+    - get_districts(region: Optional[str] = None) -> List[str]:
+        Récupère la liste des districts d'une région.
+
+    - alertes(limit: int = 100, severity: Optional[str] = None, status: Optional[str] = None) -> pd.DataFrame:
+        Récupère les alertes de dengue.
+
+    - donnees_par_periode(date_debut: Optional[str] = None, date_fin: Optional[str] = None, region: Optional[str] = None, district: Optional[str] = None, frequence: str = "W") -> pd.DataFrame:
+        Récupère les données par période.
+
+    - get_taux_hospitalisation(date_debut: str, date_fin: str, region: str = "Toutes", district: str = "Toutes") -> pd.DataFrame:
+        Récupère le taux de hospitalisation.
+
+    - get_taux_positivite(date_debut: str, date_fin: str, region: Optional[str] = None, district: Optional[str] = None) -> pd.DataFrame:
+        Récupère le taux de positivité.
+
+    - get_alertes(limit: int = 10, severity: Optional[str] = None, status: Optional[str] = None, region: Optional[str] = None, district: Optional[str] = None, date_debut: Optional[str] = None, date_fin: Optional[str] = None) -> pd.DataFrame:
+        Récupère les alertes de dengue.
+
+    - configurer_seuils(**kwargs) -> Dict[str, Any]:
+        Configure les seuils d'alerte.
+
+    - verifier_alertes(date_debut: Optional[str] = None, date_fin: Optional[str] = None, region: str = "Toutes", district: str = "Toutes") -> pd.DataFrame:
+        Vérifie les alertes de dengue.
+
+    - save_to_file(filepath: Optional[str] = None, date_debut: Optional[str] = None, date_fin: Optional[str] = None, region: Optional[str] = None, district: Optional[str] = None, limit: Optional[int] = None, page: Optional[int] = None, format: str = "csv") -> bool:
+        Sauvegarde les données dans un fichier.
+
+    - alertes_to_file(filepath: Optional[str] = None, limit: int = 100, severity: Optional[str] = None, status: Optional[str] = None, format: str = "csv") -> bool:
+        Sauvegarde les alertes dans un fichier.
+
+    - detect_anomalies(data: pd.DataFrame, method: str = "zscore", columns: Optional[List[str]] = None) -> pd.DataFrame:
+        Détecte les anomalies dans les données.
+
+    - calculate_rates(date_debut: str, date_fin: str, region: Optional[str] = None, district: Optional[str] = None) -> pd.DataFrame:
+        Calcule les taux de dengue.
+
+    - clear_cache() -> None:
+        Vide le cache.
+
+    - get_cache_info() -> Dict[str, Any]:
+        Récupère les informations du cache.
+
+    - set_cache_ttl(ttl: int) -> None:
+        Définit la durée de vie du cache.
+
+    - __enter__() -> 'AppiClient':
+        Méthode d'entrée pour le contexte with.
+
+    - __exit__() -> None:
+        Méthode de sortie pour le contexte with.
+
+    - resumer(df: pd.DataFrame) -> None:
+        Résume les données.
+
+    - graph_desc(df: pd.DataFrame) -> None:
+        Affiche le graphique descriptif.
+
+    - evolution(df: pd.DataFrame) -> None:
+        Affiche l'évolution des données.
+
+    - from_env() -> 'AppiClient':
+        Crée une instance du client à partir des variables d'environnement.
+
+    - _make_request(method: str, endpoint: str, params: Optional[Dict[str, Any]] = None, data: Optional[Dict[str, Any]] = None, files: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None, use_form_data: bool = False) -> Dict[str, Any]:
+        Effectue une requête HTTP vers l'API avec gestion d'erreurs et retry.
+
+    - _make_request_with_retry(method: str, endpoint: str, params: Optional[Dict[str, Any]] = None, data: Optional[Dict[str, Any]] = None, files: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None, use_form_data: bool = False) -> Dict[str, Any]:
+        Effectue une requête HTTP vers l'API avec gestion d'erreurs et retry.
+    ---
+
     """
     
     def __init__(self, 

@@ -2,6 +2,28 @@
 
 Toutes les modifications importantes apportées au package `dengsurvap-bf` sont documentées dans ce fichier.
 
+## [0.2.3] - 2024-12-19
+
+### 🔧 Corrections de bugs
+- **CLI Export** : Ajout de l'argument `--filepath` pour l'exportation
+- **CLI Export** : Support du format Excel dans les commandes d'export
+- **CLI Export** : Création automatique des répertoires parents si nécessaire
+- **CLI Cas** : Correction de l'erreur `'str' object has no attribute 'date_consultation'`
+- **Client** : Amélioration de la gestion des données malformées dans les méthodes de récupération
+
+### 🆕 Nouvelles fonctionnalités CLI
+- **Export Excel** : Support complet du format Excel (.xlsx) pour l'exportation
+- **Argument filepath** : Nouvel argument `--filepath` pour spécifier le chemin de sortie
+- **Création de répertoires** : Création automatique des répertoires parents lors de l'export
+
+### 📝 Améliorations de la documentation
+- Mise à jour des exemples d'utilisation pour les nouvelles fonctionnalités CLI
+- Documentation des nouveaux arguments d'export
+
+### 🧪 Tests
+- Tests mis à jour pour les nouvelles fonctionnalités d'export
+- Tests de robustesse pour la gestion des données malformées
+
 ## [0.2.0] - 2024-12-19
 
 ### 🔄 Modifications majeures des méthodes de données
