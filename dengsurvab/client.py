@@ -320,18 +320,18 @@ class AppiClient:
             # Créer une liste de dictionnaires
             data_list = []
             for cas in cas_list:
-                # cas_dict = cas.model_dump()
-                # Convertir les dates en string pour pandas
-                if cas.get('date_consultation'):
-                    cas['date_consultation'] = str(cas['date_consultation'])
-                data_list.append(cas)
-            
+                if isinstance(cas, dict):
+                    # Convertir les dates en string pour pandas
+                    if cas.get('date_consultation'):
+                        cas['date_consultation'] = str(cas['date_consultation'])
+                    data_list.append(cas)
+                else:
+                    # Ignorer les entrées non-dictionnaires
+                    continue
             df = pd.DataFrame(data_list)
-            
             # Convertir les colonnes de dates
             if 'date_consultation' in df.columns:
                 df['date_consultation'] = pd.to_datetime(df['date_consultation'], errors='coerce')
-            
             return df
         else:
             # Retourner un DataFrame vide avec les colonnes attendues

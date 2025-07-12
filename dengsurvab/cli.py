@@ -7,6 +7,7 @@ Ce module fournit une interface CLI simple pour utiliser le client.
 import argparse
 import sys
 import os
+import pandas as pd
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -67,7 +68,8 @@ Exemples d'utilisation:
     # Commande export
     export_parser = subparsers.add_parser("export", help="Exporter les données")
     export_parser.add_argument("--format", choices=["csv", "json", "excel"], default="csv", help="Format d'export")
-    export_parser.add_argument("--output", help="Fichier de sortie")
+    export_parser.add_argument("--filepath", help="Chemin du fichier de sortie")
+    export_parser.add_argument("--output", help="Fichier de sortie (alias pour filepath)")
     export_parser.add_argument("--date-debut", help="Date de début (YYYY-MM-DD)")
     export_parser.add_argument("--date-fin", help="Date de fin (YYYY-MM-DD)")
     export_parser.add_argument("--region", help="Région")
@@ -201,16 +203,31 @@ def handle_cas(client, args):
         
         print(f"\n📋 Cas récupérés: {len(cas)}")
         
-        for i, c in enumerate(cas.head(5).iterrows(), 1):  # Afficher les 5 premiers
-            _, row = c
-            print(f"   {i}. {row.get('date_consultation', 'N/A')} - {row.get('region', 'N/A')} - {row.get('sexe', 'N/A')} ({row.get('age', 'N/A')} ans)")
-            if row.get('resultat_test'):
-                print(f"      Test: {row.get('resultat_test')}")
-            if row.get('hospitalise'):
-                print(f"      Hospitalisé: {row.get('hospitalise')}")
-        
-        if len(cas) > 5:
-            print(f"   ... et {len(cas) - 5} autres cas")
+        if not cas.empty:
+            # DEBUG: Afficher le type et le contenu des 3 premières lignes
+            print("[DEBUG] Types des premières lignes:")
+            for i, (_, row) in enumerate(cas.head(3).iterrows(), 1):
+                print(f"  Row {i}: type={type(row)}, value={row}")
+            # Afficher les 5 premiers cas
+            for i, (_, row) in enumerate(cas.head(5).iterrows(), 1):
+                if not isinstance(row, pd.Series):
+                    print(f"[DEBUG] Ligne inattendue ignorée: type(row)={type(row)}, value={row}")
+                    continue
+                date_consultation = row.get('date_consultation', 'N/A')
+                region = row.get('region', 'N/A')
+                sexe = row.get('sexe', 'N/A')
+                age = row.get('age', 'N/A')
+                print(f"   {i}. {date_consultation} - {region} - {sexe} ({age} ans)")
+                resultat_test = row.get('resultat_test')
+                if resultat_test and pd.notna(resultat_test):
+                    print(f"      Test: {resultat_test}")
+                hospitalise = row.get('hospitalise')
+                if hospitalise and pd.notna(hospitalise):
+                    print(f"      Hospitalisé: {hospitalise}")
+            if len(cas) > 5:
+                print(f"   ... et {len(cas) - 5} autres cas")
+        else:
+            print("   Aucun cas trouvé")
             
     except Exception as e:
         print(f"❌ Erreur lors de la récupération des cas: {e}")
@@ -245,26 +262,50 @@ def handle_export(client, args):
     """Gérer la commande export."""
     print(f"💾 Export des données au format {args.format}...")
     
+    # Déterminer le chemin du fichier
+    filepath = args.filepath or args.output
+    
     try:
-        data = client.export_data(
-            format=args.format,
-            date_debut=args.date_debut,
-            date_fin=args.date_fin,
-            region=args.region,
-            district=args.district
-        )
-        
-        if args.output:
-            with open(args.output, "wb") as f:
-                f.write(data)
-            print(f"✅ Données exportées dans '{args.output}' ({len(data)} bytes)")
-        else:
-            # Afficher les données
-            if args.format == "json":
-                import json
-                print(json.dumps(json.loads(data.decode()), indent=2))
+        if filepath:
+            # Créer le répertoire parent si nécessaire
+            import os
+            dir_path = os.path.dirname(filepath)
+            if dir_path and not os.path.exists(dir_path):
+                os.makedirs(dir_path, exist_ok=True)
+                print(f"📁 Répertoire créé: {dir_path}")
+            
+            # Export vers fichier
+            success = client.save_to_file(
+                filepath=filepath,
+                format=args.format,
+                date_debut=args.date_debut,
+                date_fin=args.date_fin,
+                region=args.region,
+                district=args.district
+            )
+            
+            if success:
+                print(f"✅ Données exportées dans '{filepath}'")
             else:
-                print(data.decode())
+                print(f"❌ Erreur lors de l'export vers '{filepath}'")
+        else:
+            # Export vers stdout (pour les formats texte)
+            if args.format in ["csv", "json"]:
+                data = client.exporter.export_data(
+                    format=args.format,
+                    date_debut=args.date_debut,
+                    date_fin=args.date_fin,
+                    region=args.region,
+                    district=args.district
+                )
+                
+                if args.format == "json":
+                    import json
+                    print(json.dumps(json.loads(data.decode()), indent=2))
+                else:
+                    print(data.decode())
+            else:
+                print("❌ Le format Excel nécessite un fichier de sortie (--filepath)")
                 
     except Exception as e:
         print(f"❌ Erreur lors de l'export: {e}")
